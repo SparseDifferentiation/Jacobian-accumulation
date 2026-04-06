@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+
+# ADOL-C build artifacts
+adol-c/ADOL-C/
+adol-c/sparse_jacobian

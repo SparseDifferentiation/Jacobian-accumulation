@@ -1,0 +1,17 @@
+[project]
+name = "jacobian-accumulation"
+version = "0.1.0"
+description = "Benchmarking SparseDiffEngine against AD tools for Jacobian computation"
+requires-python = ">=3.11"
+dependencies = [
+    "casadi",
+    "numpy",
+    "scipy",
+    "cvxpy @ git+https://github.com/cvxgrp/DNLP.git",
+    "sparsediffpy",
+]
+
+[project.optional-dependencies]
+jax = [
+    "jax[cpu]",
+]
