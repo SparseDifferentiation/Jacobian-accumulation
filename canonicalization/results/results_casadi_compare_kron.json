@@ -1,0 +1,47 @@
+[
+  {
+    "name": "UnconstrainedQP",
+    "parametric": false,
+    "casadi_single_s": 0.021236030996078625,
+    "casadi_resolve_s": NaN,
+    "casadi_build_s": 0.17404629700467922,
+    "engine_single_s": 0.0738833630020963,
+    "engine_resolve_s": NaN
+  },
+  {
+    "name": "QuantumHilbertMatrix",
+    "parametric": false,
+    "casadi_single_s": 1.4129712130088592,
+    "casadi_resolve_s": NaN,
+    "casadi_build_s": 0.4121772310027154,
+    "engine_single_s": 1.5745502930076327,
+    "engine_resolve_s": NaN
+  },
+  {
+    "name": "SDPSegfault1132",
+    "parametric": false,
+    "casadi_single_s": 17.64957897599379,
+    "casadi_resolve_s": NaN,
+    "casadi_build_s": 0.13603146201057825,
+    "engine_single_s": 14.610757112008287,
+    "engine_resolve_s": NaN
+  },
+  {
+    "name": "ConvexPlasticity",
+    "parametric": true,
+    "casadi_single_s": 0.13283546999446116,
+    "casadi_resolve_s": 0.006704591003654059,
+    "casadi_build_s": 0.09813960999599658,
+    "engine_single_s": 2.2918680959992344,
+    "engine_resolve_s": 0.7071713810000801
+  },
+  {
+    "name": "TvInpainting",
+    "parametric": false,
+    "casadi_single_s": 8.199086697000894,
+    "casadi_resolve_s": NaN,
+    "casadi_build_s": 1.163761345000239,
+    "engine_single_s": 1.1286224669893272,
+    "engine_resolve_s": NaN
+  }
+]

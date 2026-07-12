@@ -1,0 +1,74 @@
+[
+  {
+    "name": "SimpleLP",
+    "parametric": false,
+    "casadi_single_s": 38.07090328198683,
+    "casadi_resolve_s": NaN,
+    "casadi_build_s": 2.467725933995098,
+    "engine_single_s": 5.023374637006782,
+    "engine_resolve_s": NaN
+  },
+  {
+    "name": "SimpleScalarParametrizedLP",
+    "parametric": true,
+    "casadi_single_s": 4.573266501989565,
+    "casadi_resolve_s": 0.12431382450449746,
+    "casadi_build_s": 0.42547026500687934,
+    "engine_single_s": 0.9804558729956625,
+    "engine_resolve_s": 0.23638746950018685
+  },
+  {
+    "name": "SimpleFullyParametrizedLP",
+    "parametric": true,
+    "casadi_single_s": 2.3609032559907064,
+    "casadi_resolve_s": 0.061888100499345455,
+    "casadi_build_s": 0.07011182099813595,
+    "engine_single_s": 0.48251623299438506,
+    "engine_resolve_s": 0.1204581505007809
+  },
+  {
+    "name": "LeastSquares",
+    "parametric": false,
+    "casadi_single_s": 36.55167136900127,
+    "casadi_resolve_s": NaN,
+    "casadi_build_s": 2.8469577750074677,
+    "engine_single_s": 1.6165923359949375,
+    "engine_resolve_s": NaN
+  },
+  {
+    "name": "SimpleQP",
+    "parametric": false,
+    "casadi_single_s": 53.713199580000946,
+    "casadi_resolve_s": NaN,
+    "casadi_build_s": 2.951898915998754,
+    "engine_single_s": 1.7012179669982288,
+    "engine_resolve_s": NaN
+  },
+  {
+    "name": "ParametrizedQP",
+    "parametric": true,
+    "casadi_single_s": 771.5462318049977,
+    "casadi_resolve_s": 0.9376802460028557,
+    "casadi_build_s": 0.08154773199930787,
+    "engine_single_s": 2.5202121500042267,
+    "engine_resolve_s": 0.9424821224965854
+  },
+  {
+    "name": "HuberRegression",
+    "parametric": false,
+    "casadi_single_s": 42.349199038988445,
+    "casadi_resolve_s": NaN,
+    "casadi_build_s": 2.787469175993465,
+    "engine_single_s": 1.8831094299966935,
+    "engine_resolve_s": NaN
+  },
+  {
+    "name": "SVMWithL1Regularization",
+    "parametric": true,
+    "casadi_single_s": 145.5027420559927,
+    "casadi_resolve_s": 0.5482201554987114,
+    "casadi_build_s": 2.1444445480010472,
+    "engine_single_s": 1.7852091660024598,
+    "engine_resolve_s": 0.49135426350403577
+  }
+]

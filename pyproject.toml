@@ -7,11 +7,15 @@ dependencies = [
     "casadi",
     "numpy",
     "scipy",
-    "cvxpy @ git+https://github.com/cvxgrp/DNLP.git",
-    "sparsediffpy",
+    "cvxpy @ git+https://github.com/Transurgeon/cvxpy.git@pr-c-resolve-caching",
+    # PyPI 0.6.0 is fine for cold-extraction benchmarks; warm re-solves need a build
+    # containing the composite-param_source refresh fix (SparseDiffEngine #107) --
+    # see canonicalization/README.md.
+    "sparsediffpy>=0.6.0",
 ]
 
 [project.optional-dependencies]
 jax = [
     "jax[cpu]",
 ]
+

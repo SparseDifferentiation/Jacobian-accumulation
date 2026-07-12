@@ -1,0 +1,119 @@
+[
+  {
+    "name": "ConeMatrixStuffing",
+    "parametric": false,
+    "casadi_single_s": 6.103287590012769,
+    "casadi_resolve_s": NaN,
+    "casadi_build_s": 5.790749222011073,
+    "engine_single_s": 3.9404278060101205,
+    "engine_resolve_s": NaN
+  },
+  {
+    "name": "SmallMatrixStuffing",
+    "parametric": false,
+    "casadi_single_s": 2.770518028002698,
+    "casadi_resolve_s": NaN,
+    "casadi_build_s": 2.721690855003544,
+    "engine_single_s": 2.7461582149990136,
+    "engine_resolve_s": NaN
+  },
+  {
+    "name": "ParamConeMatrixStuffing",
+    "parametric": true,
+    "casadi_single_s": 0.0036215669970260933,
+    "casadi_resolve_s": 0.0003238040008000098,
+    "casadi_build_s": 0.0006120970065239817,
+    "engine_single_s": 0.1427788760047406,
+    "engine_resolve_s": 0.0011109039987786673
+  },
+  {
+    "name": "ParamSmallMatrixStuffing",
+    "parametric": true,
+    "casadi_single_s": 0.00682198500726372,
+    "casadi_resolve_s": 0.000655735500913579,
+    "casadi_build_s": 0.0007278020057128742,
+    "engine_single_s": 0.20957537899084855,
+    "engine_resolve_s": 0.001984715992875863
+  },
+  {
+    "name": "SlowPruning",
+    "parametric": false,
+    "casadi_single_s": 38.769570349002606,
+    "casadi_resolve_s": NaN,
+    "casadi_build_s": 0.10936738499731291,
+    "engine_single_s": 2.8047702240000945,
+    "engine_resolve_s": NaN
+  },
+  {
+    "name": "Yitzhaki",
+    "parametric": false,
+    "casadi_single_s": 8.716912421994493,
+    "casadi_resolve_s": NaN,
+    "casadi_build_s": 0.44539363800140563,
+    "engine_single_s": 0.47087837499566376,
+    "engine_resolve_s": NaN
+  },
+  {
+    "name": "Murray",
+    "parametric": false,
+    "casadi_single_s": 25.931763831002172,
+    "casadi_resolve_s": NaN,
+    "casadi_build_s": 0.7229580220009666,
+    "engine_single_s": 3.5228074619953986,
+    "engine_resolve_s": NaN
+  },
+  {
+    "name": "Cajas",
+    "parametric": false,
+    "casadi_single_s": 4.875183599011507,
+    "casadi_resolve_s": NaN,
+    "casadi_build_s": 0.12948188700829633,
+    "engine_single_s": 1.1175247869978193,
+    "engine_resolve_s": NaN
+  },
+  {
+    "name": "OptimalAdvertising",
+    "parametric": false,
+    "casadi_single_s": 9.470526531003998,
+    "casadi_resolve_s": NaN,
+    "casadi_build_s": 0.19461093899735715,
+    "engine_single_s": 6.161185575998388,
+    "engine_resolve_s": NaN
+  },
+  {
+    "name": "FactorCovarianceModel",
+    "parametric": true,
+    "casadi_single_s": 250.38262325999676,
+    "casadi_resolve_s": 3.955702323495643,
+    "casadi_build_s": 1.5043124439980602,
+    "engine_single_s": 2.046363437999389,
+    "engine_resolve_s": 0.5671005385011085
+  },
+  {
+    "name": "ConvexPlasticity",
+    "parametric": true,
+    "casadi_single_s": 0.2062523259955924,
+    "casadi_resolve_s": 0.009993439001846127,
+    "casadi_build_s": 0.12846765900030732,
+    "engine_single_s": 2.820142324999324,
+    "engine_resolve_s": 0.706938777504547
+  },
+  {
+    "name": "TvInpainting",
+    "parametric": false,
+    "casadi_single_s": 8.490398344001733,
+    "casadi_resolve_s": NaN,
+    "casadi_build_s": 0.9016734510078095,
+    "engine_single_s": 1.1391665779956384,
+    "engine_resolve_s": NaN
+  },
+  {
+    "name": "SemidefiniteProgramming",
+    "parametric": false,
+    "casadi_single_s": 66.43966312900011,
+    "casadi_resolve_s": NaN,
+    "casadi_build_s": 0.42908390700176824,
+    "engine_single_s": 2.065322501002811,
+    "engine_resolve_s": NaN
+  }
+]
