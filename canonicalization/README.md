@@ -114,8 +114,13 @@ parameters only touch `b`); the engine keeps the advantage where a parameter res
 `P` itself (FactorCovarianceModel, 7×).
 
 Incidental find: CasADi 3.7.2 mis-evaluates Jacobian *values* (sparsity correct) for
-scalar-broadcast expressions of the form `u + alpha - mtimes(dense, x)`; see the
-work-around and repro notes in the CVaR builder in `casadi_problems_ext_lp.py`.
+scalar-broadcast operands whenever `jacobian()` runs in reverse mode with batched
+adjoint directions — all directions after the first are dropped. Dense blocks (as in
+CVaR's `u + alpha - mtimes(dense, x)`) trigger it indirectly by flipping the ad-mode
+heuristic to reverse; `repmat`, `max_num_dir=1`, forward mode, plain `F.reverse(n)`,
+and SX are all unaffected. Work-around in the CVaR builder in
+`casadi_problems_ext_lp.py`; upstream report drafted in
+`casadi_issue_draft_broadcast_bug.md`.
 
 ## Files
 
@@ -125,7 +130,14 @@ work-around and repro notes in the CVaR builder in `casadi_problems_ext_lp.py`.
   row/column order; auto-discovered by the harness.
 - `run_backend_benchmarks.py` — cvxcore-backend comparison; subprocess-isolated per
   problem, streams partial results, self-contained.
-- `probes/` — the mechanism experiments quoted above.
+- `probes/` — the mechanism experiments quoted above, plus `probe_qpsol_path.py`
+  (CasADi's own `qpsol`/`hessian`/`quadratic_coeff` routes vs the harness path:
+  all slower, so the harness understates CasADi's cost on its own QP interface)
+  and `probe_coloring_sweeps.py` (makes the sweep counts visible:
+  `uni_coloring` sizes vs measured jacobian time, dense/sparse/tridiagonal),
+  and `probe_sx_vs_mx.py` (SX scalar-expansion is 200–300× slower than MX for
+  extraction at every size — nodes ~ nnz — and cannot reach benchmark sizes;
+  MX is CasADi's best representation for this workload).
 - `extras/` — an early draft (parametric Newton re-solves via the derivative oracle),
   kept for reference.
 

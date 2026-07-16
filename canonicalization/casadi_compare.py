@@ -27,8 +27,10 @@ CasADi side: we hand-write the *already-lowered* model (same epigraph variables,
 same row order as CVXPY's canonicalization -- cones are pure metadata) as MX
 expressions f(z, p) and g(z, p) := b - Az (the slack expression), and extract
 
-    P, grad = casadi.hessian(f, z)          c = grad|_{z=0}
-    A = -casadi.jacobian(g, z)              b = g|_{z=0}
+    grad = casadi.gradient(f, z)            P = casadi.jacobian(grad, z)
+    c = grad|_{z=0}                         (deliberately NOT casadi.hessian --
+    A = -casadi.jacobian(g, z)               see casadi_extract_function)
+    b = g|_{z=0}
 
 wrapped in a casadi.Function(p -> (P, c, A, b)).  This is exactly how CasADi's
 own qpsol/conic path recovers problem data from an NLP-form model, without

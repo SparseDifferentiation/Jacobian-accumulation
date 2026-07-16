@@ -1,0 +1,88 @@
+Probe results, measured 2026-07-16.
+Machine: MacBook Pro (15-inch, 2018), 6-core Intel i7-8850H, 16 GB RAM, macOS 15.7.
+Python 3.14, casadi 3.7.2 (PyPI), numpy 2.4.6, BLAS pinned to 1 thread
+(OMP/OPENBLAS/MKL/VECLIB *_NUM_THREADS=1). No timing job ran concurrently.
+Same-day re-verification: casadi_compare.py --verify => ALL MATCH (25/25,
+max|diff|=0 on 22 problems, <= 6.7e-16 on the rest).
+
+============================================================================
+probes/probe_qpsol_path.py --big
+(all paths end with numeric (P, c, A, b); SimpleQP family, m = 5n, dense P/G)
+============================================================================
+n=100 (m=500):
+    A harness: jac(grad(f)) + jac(g) + eval           0.03s
+    B hessian(f,x) + jac(g) + eval                    0.06s
+    C qpsol('qrqp') construction                      0.15s
+    D quadratic_coeff + linear_coeff + eval           0.07s
+n=200 (m=1000):
+    A harness: jac(grad(f)) + jac(g) + eval           0.14s
+    B hessian(f,x) + jac(g) + eval                    0.67s
+    C qpsol('qrqp') construction                      1.28s
+    D quadratic_coeff + linear_coeff + eval           0.67s
+n=400 (m=2000):
+    A harness: jac(grad(f)) + jac(g) + eval           0.77s
+    B hessian(f,x) + jac(g) + eval                    8.56s
+    C qpsol('qrqp') construction                     13.19s
+    D quadratic_coeff + linear_coeff + eval           8.86s
+n=800 (m=4000):
+    A harness: jac(grad(f)) + jac(g) + eval           5.42s
+    B hessian(f,x) + jac(g) + eval                  148.21s
+    C qpsol('qrqp') construction                    172.92s
+    D quadratic_coeff + linear_coeff + eval         139.73s
+
+Conclusion: the harness path is the fastest CasADi route at every size; the
+benchmark understates CasADi's cost on its own qpsol interface by ~32x at
+n=800. casadi 3.7.2 conic.cpp qpsol_nlp (lines 172-205) uses the identical
+construction plus {"symmetric": true} on the H jacobian (star coloring).
+
+============================================================================
+probes/probe_coloring_sweeps.py
+(g = A x, A constant DM; colors = casadi Sparsity::uni_coloring sizes)
+============================================================================
+dense tall blocks (m=2n): forward colors = n, no compression possible
+  dense 500x250        nnz    125000  pattern  0.017s  colors fwd/adj  250/  500  jac(sym)   0.06s  ctor+eval  0.00s
+  dense 1000x500       nnz    500000  pattern  0.082s  colors fwd/adj  500/ 1000  jac(sym)   0.33s  ctor+eval  0.01s
+  dense 2000x1000      nnz   2000000  pattern  0.479s  colors fwd/adj 1000/ 2000  jac(sym)   2.42s  ctor+eval  0.07s
+  dense 4000x2000      nnz   8000000  pattern  2.690s  colors fwd/adj 2000/ 4000  jac(sym)  16.33s  ctor+eval  0.30s
+same shapes, ~10 nnz/row: coloring compresses, sweeps collapse
+  sparse 500x250       nnz      5000  pattern  0.025s  colors fwd/adj   54/   59  jac(sym)   0.00s  ctor+eval  0.00s
+  sparse 1000x500      nnz     10000  pattern  0.008s  colors fwd/adj   53/   60  jac(sym)   0.01s  ctor+eval  0.00s
+  sparse 2000x1000     nnz     20000  pattern  0.010s  colors fwd/adj   54/   61  jac(sym)   0.02s  ctor+eval  0.00s
+  sparse 4000x2000     nnz     40000  pattern  0.027s  colors fwd/adj   55/   60  jac(sym)   0.03s  ctor+eval  0.00s
+tridiagonal: 3 colors at any size
+  tridiag 100000       nnz    299998  pattern  0.106s  colors fwd/adj    3/    3  jac(sym)   0.17s  ctor+eval  0.01s
+  tridiag 1000000      nnz   2999998  pattern  1.431s  colors fwd/adj    3/    3  jac(sym)   2.35s  ctor+eval  0.12s
+CVaR-shaped slice (full benchmark block is 131072 x 769 dense):
+  dense 8192x769       nnz   6299648  pattern 11.753s  colors fwd/adj  769/ 8192  jac(sym)  17.04s  ctor+eval  0.22s
+
+============================================================================
+probes/probe_sx_vs_mx.py
+============================================================================
+SimpleQP family, harness extraction path, MX vs SX
+      n kind  build(s) extract(s)    g nodes
+     50   MX      0.02       0.01         13
+     50   SX      0.02       0.47      40820
+    100   MX      0.01       0.03         13
+    100   SX      0.06       3.44     156620
+    200   MX      0.05       0.14         13
+    200   SX      0.26      27.64     613220
+    400   MX      0.21       0.78         13
+    400   SX      1.21     213.98    2426420
+bare dense-block jacobian, g = A x (m = 2n)
+      n kind  build(s) jac+eval(s)    g nodes
+    250   MX      0.02        0.08          5
+    250   SX      0.12       11.86     374750
+    500   MX      0.08        0.39          5
+    500   SX      0.49       93.82    1499500
+   1000   MX      0.38        3.74          5
+   1000   SX      3.02      757.37    5999000
+
+============================================================================
+Broadcast bug localization (see casadi_issue_draft_broadcast_bug.md)
+g = alpha - 2*x[:3], d g/d alpha, expected [1, 1, 1]:
+  forward mode (ad_weight 0.0)                 [1, 1, 1]  OK
+  reverse mode, batched dirs (default)         [1, 0, 0]  WRONG
+  reverse mode, max_num_dir=1                  [1, 1, 1]  OK
+  explicit F.reverse(3), 3 unit adjoint seeds  [1, 1, 1]  OK
+  SX                                           [1, 1, 1]  OK
+  repmat(alpha, 3, 1) instead of broadcast     [1, 1, 1]  OK

@@ -346,9 +346,11 @@ def make_cvar(full: bool) -> Spec:
         u = ca.MX.sym("u", num_scenarios)
         z = ca.vertcat(x, alpha, u)
         f = ca.dot(ca.DM(c0), x)
-        # repmat instead of scalar broadcast: casadi 3.7.2's evaluated jacobian
-        # silently drops all but the first alpha entry when a scalar-broadcast
-        # node is combined with a dense mtimes (sparsity is right, values not)
+        # repmat instead of scalar broadcast: casadi 3.7.2 drops all but the
+        # first alpha entry when jacobian() runs in reverse mode with batched
+        # adjoint directions (the dense mtimes flips the ad-mode heuristic to
+        # reverse); see casadi_issue_draft_broadcast_bug.md for the minimal
+        # repro and localization
         g = ca.vertcat(
             u + ca.repmat(alpha, num_scenarios, 1) - ca.mtimes(ca.DM(A0), x),
             u,
