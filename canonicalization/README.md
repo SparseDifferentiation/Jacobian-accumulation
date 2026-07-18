@@ -122,6 +122,91 @@ and SX are all unaffected. Work-around in the CVaR builder in
 `casadi_problems_ext_lp.py`; upstream report drafted in
 `casadi_issue_draft_broadcast_bug.md`.
 
+## Beyond CasADi: the Julia sparse-AD stack, JuMP/MOI, and AMPL/ASL
+
+Three further comparisons on 4 representative problems (`_lowered_data.py`:
+SimpleQP, LeastSquares, ParametrizedQP, and CVaRSlice = the benchmark CVaR
+generator at 8192 scenarios — the full 131072 DNFs in CasADi and exceeds this
+machine through any modeling layer). Same lowered forms, same seeds, verified
+bit-identical against CVXPY's CLARABEL data before timing (`--verify`,
+`--verify-full`: ALL MATCH):
+
+| Runner | Represents | Mechanism |
+|---|---|---|
+| `julia_compare.py --tool sct` | 2025 state-of-the-art *generic* sparse AD: SparseConnectivityTracer + SparseMatrixColorings + DifferentiationInterface | trace pattern → greedy color → compressed ForwardDiff sweeps |
+| `julia_compare.py --tool jump` | JuMP/MOI `copy_to` into a `MatrixOfConstraints` cache (what Clarabel.jl et al. run in `attach_optimizer`) | **no AD**: coefficient assembly from declared structure |
+| `asl_compare.py` | the real AMPL Solver Library (Pyomo nl writer → PyNumero `AslNLP`) | **no detection, no coloring**: linear parts are explicit J-segments in the .nl; Hessian structure via partial separability at read time (Gay 1996) |
+
+Measured 2026-07-17/18, same machine/setup as above (Julia 1.10.5 single-threaded,
+pyomo 6.10.1, ASL built from source). Cold single extraction, seconds:
+
+| Problem | engine | CasADi | SCT stack | JuMP `copy_to` | ASL (.nl round trip) |
+|---|---|---|---|---|---|
+| SimpleQP | 1.70 | 53.7 | 85.5 | **0.74** | 79.3 (30.9 write + 47.8 read; evals 0.63) |
+| LeastSquares | 1.62 | 36.6 | 90.5 | **0.76** | 58.5 (evals 0.35) |
+| ParametrizedQP | 2.52 | 771.5 | 111.5 | **0.83** | 61.0 (evals 0.46) |
+| CVaRSlice | — | ~28.8¹ | 51.3 | **0.075** | 9.7 (evals 0.04) |
+
+¹ CasADi at the slice size from `probes/probe_coloring_sweeps.py` (pattern
+11.8 s + jacobian 17.0 s); the suite-size CVaR is the DNF > 10 h case.
+
+Warm re-solve, ParametrizedQP (fresh parameter values): engine 0.94 s,
+CasADi 0.94 s, SCT stack 17.9 s (re-runs its compressed sweeps with cached
+preparation — the generic stack has no parametric tape), JuMP 0.63 s (fresh
+`copy_to`; base JuMP has no vectorized parameter refresh — see
+ParametricOptInterface.jl), ASL 0.076 s in-memory re-eval (lower bound; the
+numbers cannot actually change) / 84.7 s true .nl rewrite.
+
+Take-aways, backed by the dense-block probes
+(`probes/probe_dense_block_julia.jl`, `probes/probe_dense_block_asl.py`,
+mirroring `probe_why_slow.py`; results in `results/`):
+
+1. **The dense-block pathology is paradigm-wide, not CasADi-specific.** On the
+   Jacobian of `x ↦ Ax` with dense 4000×2000 `A`, the Julia stack needs 53 s
+   (40 s of it greedy distance-2 *coloring*; 2000 forward colors) vs CasADi's
+   16.3 s; the sparse control collapses to ~0.03 s for both. Per-stage: SCT
+   detection is much faster than CasADi's bitvector sweeps, SMC coloring much
+   slower, compressed accumulation comparable. On SCT's Hessian side, star
+   coloring on SimpleQP's dense 1600² pattern costs 26.2 s prep — the same
+   degeneration `casadi.hessian` shows.
+2. **Declared-structure systems never pay it.** ASL is linear in nnz in every
+   probe experiment — its only real cost is the ASCII .nl round trip (~4 s per
+   M-nnz to write + ~4 s per M-nnz to parse; CPU-bound formatting, not disk —
+   and AMPL's own C translator emitting *binary* .nl would cut both), after
+   which Jacobian+Hessian evaluation is 0.2–0.6 s where the AD tools pay tens
+   of seconds. JuMP's `copy_to` is pure data-structure assembly and beats
+   everything, including the engine, on these 4 problems — though it starts
+   from explicit coefficient arrays rather than a DCP atom tree, so it does
+   strictly less work than CVXPY+engine canonicalization (see fairness notes).
+3. **CVaR's epigraph-sum row defeats coloring entirely** (all 8193 u/α columns
+   pairwise conflict → 8961 colors), which is why generic AD cannot compress
+   it at any implementation quality; JuMP/ASL are indifferent.
+
+Fairness / boundary notes (mirroring the CasADi rules above):
+
+- All tools receive the already-lowered formulation; model/graph construction
+  is excluded from the headline and reported (`build_s`). The excluded share
+  differs by tool and is documented rather than hidden: CasADi's MX graph
+  build ~0.1–3 s, SCT closures ~0, JuMP macro build 1.7–5.5 s, ASL's Pyomo
+  build 5–10 s (a Python-loop overestimate of AMPL's C translator).
+- Declared-structure tools (JuMP, ASL) consume explicit coefficient blocks —
+  that is their input contract, assembled at model-build time from the user's
+  data arrays; the AD tools must *recover* those coefficients from the
+  expression graph, which is precisely the mechanism under study.
+- SCT numbers exclude Julia JIT (small-instance warmup; iteration 1 reported
+  separately); P uses the faster of DI's native sparse Hessian vs
+  jacobian-of-gradient per problem, mirroring the CasADi hessian rule.
+- ASL's headline includes the .nl disk round trip because the file *is* ASL's
+  interface (no in-memory API exists); nl file sizes are reported. Timed
+  writes carry no symbolic labels; verification (which needs the .row/.col
+  permutation files) runs separately.
+- Cone rows are metadata everywhere: ASL sees affine bodies with ==/>= tags,
+  JuMP the genuine MOI cone sets; extraction cost is set-agnostic.
+
+The same machinery scales to the full suite via `_lowered_blocks.py` (a
+tool-neutral lowered form per problem, verified against the same CVXPY ground
+truth) and `suite_compare.py --tool jump|asl` — see those files' docstrings.
+
 ## Files
 
 - `casadi_compare.py` — harness: Spec contract, extraction, verification, timing.
@@ -130,6 +215,9 @@ and SX are all unaffected. Work-around in the CVaR builder in
   row/column order; auto-discovered by the harness.
 - `run_backend_benchmarks.py` — cvxcore-backend comparison; subprocess-isolated per
   problem, streams partial results, self-contained.
+- `_lowered_data.py` / `julia_compare.py` / `asl_compare.py` — the 4-problem
+  SCT/JuMP/ASL comparisons (workers in `julia/`); `_lowered_blocks.py` /
+  `suite_compare.py` — the tool-neutral full-suite versions (JuMP + ASL).
 - `probes/` — the mechanism experiments quoted above, plus `probe_qpsol_path.py`
   (CasADi's own `qpsol`/`hessian`/`quadratic_coeff` routes vs the harness path:
   all slower, so the harness understates CasADi's cost on its own QP interface)

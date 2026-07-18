@@ -1,0 +1,29 @@
+/Users/trevorhegarty/Documents/Jacobian-accumulation/canonicalization/casadi_problems_ext_lp.py:387: RuntimeWarning: invalid value encountered in scalar divide
+  R0 = np.array([rs.lognormal(c0.min() / c0[i]) for i in range(m)])
+casadi 3.7.2, cvxpy 0.1.0.dev3996+gca08a26d1
+Verifying casadi-extracted (P, c, A, b) == cvxpy ignore_dpp data:
+  SimpleLP                     (full): MATCH  A[OK max|diff|=0] b[OK] c[OK] P[OK (both absent)]
+  SimpleScalarParametrizedLP   (full): MATCH  A[OK max|diff|=0] b[OK] c[OK] P[OK (both absent)]
+  SimpleFullyParametrizedLP    (full): MATCH  A[OK max|diff|=0] b[OK] c[OK] P[OK (both absent)]
+  LeastSquares                 (full): MATCH  A[OK max|diff|=0] b[OK] c[OK] P[OK max|diff|=0]
+  SimpleQP                     (full): MATCH  A[OK max|diff|=0] b[OK] c[OK] P[OK max|diff|=0]
+  ParametrizedQP               (full): MATCH  A[OK max|diff|=0] b[OK] c[OK] P[OK max|diff|=0]
+  HuberRegression              (full): MATCH  A[OK max|diff|=0] b[OK] c[OK] P[OK max|diff|=0]
+  SVMWithL1Regularization      (full): MATCH  A[OK max|diff|=0] b[OK] c[OK] P[OK (both absent)]
+  ConeMatrixStuffing           (full): MATCH  A[OK max|diff|=0] b[OK] c[OK] P[OK (both absent)]
+  SmallMatrixStuffing          (full): MATCH  A[OK max|diff|=0] b[OK] c[OK] P[OK (both absent)]
+  ParamConeMatrixStuffing      (full): MATCH  A[OK max|diff|=0] b[OK] c[OK] P[OK (both absent)]
+  ParamSmallMatrixStuffing     (full): MATCH  A[OK max|diff|=0] b[OK] c[OK] P[OK (both absent)]
+  SlowPruning                  (full): MATCH  A[OK max|diff|=0] b[OK] c[OK] P[OK max|diff|=0]
+  Yitzhaki                     (full): MATCH  A[OK max|diff|=0] b[OK] c[OK] P[OK (both absent)]
+  Murray                       (full): MATCH  A[OK max|diff|=0] b[OK] c[OK] P[OK (both absent)]
+  Cajas                        (full): MATCH  A[OK max|diff|=0] b[OK] c[OK] P[OK (both absent)]
+  OptimalAdvertising           (full): MISMATCH  A[OK max|diff|=0] b[1/251750 differ] c[OK] P[OK (both absent)]
+  FactorCovarianceModel        (full): MATCH  A[OK max|diff|=0] b[OK] c[OK] P[OK max|diff|=0]
+  ConvexPlasticity             (full): MATCH  A[OK max|diff|=0] b[OK] c[OK] P[OK max|diff|=0 (modulo 9033000 explicit zeros)]
+  TvInpainting                 (full): MATCH  A[OK max|diff|=0] b[OK] c[OK] P[OK (both absent)]
+  SemidefiniteProgramming      (full): MATCH  A[OK max|diff|=0] b[OK] c[OK] P[OK (both absent)]
+  UnconstrainedQP              (full): MATCH  A[OK max|diff|=7.11e-14] b[OK] c[OK] P[OK (both absent)]
+  QuantumHilbertMatrix         (full): MATCH  A[OK max|diff|=0] b[OK] c[OK] P[OK max|diff|=0]
+  SDPSegfault1132              (full): MATCH  A[OK max|diff|=2.22e-16] b[OK] c[OK] P[OK (both absent)]
+MISMATCHES FOUND

@@ -10,6 +10,8 @@ canonicalization/cvxpy_benchmarks/
 canonicalization/_worker_result.json
 canonicalization/results_*.txt
 canonicalization/results_*.json
+canonicalization/probes/_*.log
+canonicalization/suite_verify_*.json
 
 # ADOL-C build artifacts
 jacobian/ADOL-C/

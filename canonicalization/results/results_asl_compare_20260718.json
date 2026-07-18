@@ -1,0 +1,96 @@
+{
+  "meta": {
+    "date": "2026-07-17/18",
+    "machine": "MacBook Pro (15-inch, 2018), 6-core Intel i7-8850H, 16 GB RAM, macOS 15.7",
+    "python": "3.14.4",
+    "numpy": "2.4.6",
+    "scipy": "1.17.1",
+    "blas_threads": 1,
+    "problems_module": "_lowered_data.py (4 representative problems; CVaRSlice = benchmark CVaR generator at 8192 scenarios)",
+    "verification": "--verify and --verify-full ALL MATCH vs cvxpy get_problem_data(CLARABEL, ignore_dpp) before timing",
+    "tool": "AMPL Solver Library via Pyomo 6.10.1 nl writer + PyNumero AslNLP (libpynumero_ASL built from source via pyomo build-extensions)",
+    "harness": "asl_compare.py --time (subprocess worker per problem)"
+  },
+  "results": [
+    {
+      "name": "SimpleQP",
+      "size": "full",
+      "parametric": false,
+      "asl_single_s": 79.33494201605208,
+      "asl_build_s": 9.59947648004163,
+      "asl_resolve_reeval_s": null,
+      "asl_resolve_rewrite_s": null,
+      "stages": {
+        "t_nl_write_s": 30.861350301012862,
+        "t_asl_read_s": 47.76068456203211,
+        "t_cons_s": 0.07929197000339627,
+        "t_jac_s": 0.4037365739932284,
+        "t_hess_s": 0.22923851804807782,
+        "t_grad_s": 0.0006400909624062479,
+        "single_s": 79.33494201605208,
+        "single_aslread_s": 48.47359171503922,
+        "nl_bytes": 408918717
+      }
+    },
+    {
+      "name": "LeastSquares",
+      "size": "full",
+      "parametric": false,
+      "asl_single_s": 58.49373823287897,
+      "asl_build_s": 8.078548536985181,
+      "asl_resolve_reeval_s": null,
+      "asl_resolve_rewrite_s": null,
+      "stages": {
+        "t_nl_write_s": 28.845747809973545,
+        "t_asl_read_s": 28.75741007499164,
+        "t_cons_s": 0.07204183301655576,
+        "t_jac_s": 0.35001247498439625,
+        "t_hess_s": 0.0017165670287795365,
+        "t_grad_s": 0.0002934460062533617,
+        "single_s": 58.02722220600117,
+        "single_aslread_s": 29.181474396027625,
+        "nl_bytes": 345821251
+      }
+    },
+    {
+      "name": "ParametrizedQP",
+      "size": "full",
+      "parametric": true,
+      "asl_single_s": 61.04708885401487,
+      "asl_build_s": 8.386743708048016,
+      "asl_resolve_reeval_s": 0.0761929354921449,
+      "asl_resolve_rewrite_s": 84.71035676199244,
+      "stages": {
+        "t_nl_write_s": 30.343450256972574,
+        "t_asl_read_s": 30.166448357049376,
+        "t_cons_s": 0.07431585597805679,
+        "t_jac_s": 0.46077930502360687,
+        "t_hess_s": 0.0017877889913506806,
+        "t_grad_s": 0.00030728999990969896,
+        "single_s": 61.04708885401487,
+        "single_aslread_s": 30.7036385970423,
+        "nl_bytes": 355868730
+      }
+    },
+    {
+      "name": "CVaRSlice",
+      "size": "slice",
+      "parametric": false,
+      "asl_single_s": 9.706797523831483,
+      "asl_build_s": 5.16730940999696,
+      "asl_resolve_reeval_s": null,
+      "asl_resolve_rewrite_s": null,
+      "stages": {
+        "t_nl_write_s": 5.195588211005088,
+        "t_asl_read_s": 4.068883980973624,
+        "t_cons_s": 0.010585849988274276,
+        "t_jac_s": 0.043408041005022824,
+        "t_hess_s": 0.00029271701350808144,
+        "t_grad_s": 8.631701348349452e-05,
+        "single_s": 9.318845116999,
+        "single_aslread_s": 4.123256905993912,
+        "nl_bytes": 38558980
+      }
+    }
+  ]
+}

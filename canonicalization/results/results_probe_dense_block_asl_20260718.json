@@ -1,0 +1,187 @@
+{
+  "meta": {
+    "date": "2026-07-17/18",
+    "machine": "MacBook Pro (15-inch, 2018), 6-core Intel i7-8850H, 16 GB RAM, macOS 15.7",
+    "python": "3.14.4",
+    "numpy": "2.4.6",
+    "scipy": "1.17.1",
+    "blas_threads": 1,
+    "problems_module": "_lowered_data.py (4 representative problems; CVaRSlice = benchmark CVaR generator at 8192 scenarios)",
+    "verification": "--verify and --verify-full ALL MATCH vs cvxpy get_problem_data(CLARABEL, ignore_dpp) before timing",
+    "tool": "ASL dense-block mechanism probe (probes/probe_dense_block_asl.py); label-free timed writes",
+    "note": "E1/E3 capped at n=2000, E4 at 1e6 (Pyomo model construction is the binding constraint, not ASL)"
+  },
+  "results": {
+    "pyomo": "6.10.1",
+    "results": [
+      {
+        "label": "dense 500x250",
+        "m": 500,
+        "n": 250,
+        "nnz": 125000,
+        "t_model_build_s": 0.15673897799570113,
+        "t_nl_write_s": 0.24648705800063908,
+        "t_asl_read_s": 0.26059407799039036,
+        "t_first_jac_s": 0.002953105024062097,
+        "t_warm_jac_s": 0.00047291803639382124,
+        "nl_bytes": 2913189
+      },
+      {
+        "label": "dense 1000x500",
+        "m": 1000,
+        "n": 500,
+        "nnz": 500000,
+        "t_model_build_s": 0.526121761999093,
+        "t_nl_write_s": 1.0048183730104938,
+        "t_asl_read_s": 0.9923735809861682,
+        "t_first_jac_s": 0.011814620986115187,
+        "t_warm_jac_s": 0.0013892010319977999,
+        "nl_bytes": 11732877
+      },
+      {
+        "label": "dense 2000x1000",
+        "m": 2000,
+        "n": 1000,
+        "nnz": 2000000,
+        "t_model_build_s": 2.0743348409887403,
+        "t_nl_write_s": 4.076900991960429,
+        "t_asl_read_s": 4.0073038659757,
+        "t_first_jac_s": 0.04596587596461177,
+        "t_warm_jac_s": 0.009358572016935796,
+        "nl_bytes": 47102108
+      },
+      {
+        "label": "dense 4000x2000",
+        "m": 4000,
+        "n": 2000,
+        "nnz": 8000000,
+        "t_model_build_s": 7.69404971197946,
+        "t_nl_write_s": 16.534724634955637,
+        "t_asl_read_s": 16.454974682012107,
+        "t_first_jac_s": 0.2049020029953681,
+        "t_warm_jac_s": 0.04226046602707356,
+        "nl_bytes": 192731075
+      },
+      {
+        "label": "sparse 500x250 (10/row)",
+        "m": 500,
+        "n": 250,
+        "nnz": 5000,
+        "t_model_build_s": 0.018259016040246934,
+        "t_nl_write_s": 0.015980567026417702,
+        "t_asl_read_s": 0.011810470023192465,
+        "t_first_jac_s": 0.0003744160057976842,
+        "t_warm_jac_s": 0.00019698595860973,
+        "nl_bytes": 126953
+      },
+      {
+        "label": "sparse 1000x500 (10/row)",
+        "m": 1000,
+        "n": 500,
+        "nnz": 10000,
+        "t_model_build_s": 0.024778205959592015,
+        "t_nl_write_s": 0.030349289998412132,
+        "t_asl_read_s": 0.022493776981718838,
+        "t_first_jac_s": 0.0004684849991463125,
+        "t_warm_jac_s": 0.00021301599917933345,
+        "nl_bytes": 255736
+      },
+      {
+        "label": "sparse 2000x1000 (10/row)",
+        "m": 2000,
+        "n": 1000,
+        "nnz": 20000,
+        "t_model_build_s": 0.038186719990335405,
+        "t_nl_write_s": 0.05882927501806989,
+        "t_asl_read_s": 0.04515025397995487,
+        "t_first_jac_s": 0.0007639849791303277,
+        "t_warm_jac_s": 0.00023958197562023997,
+        "nl_bytes": 516051
+      },
+      {
+        "label": "sparse 4000x2000 (10/row)",
+        "m": 4000,
+        "n": 2000,
+        "nnz": 40000,
+        "t_model_build_s": 0.06480975600425154,
+        "t_nl_write_s": 0.12308476801263168,
+        "t_asl_read_s": 0.09001439099665731,
+        "t_first_jac_s": 0.0012499750009737909,
+        "t_warm_jac_s": 0.0002791090519167483,
+        "nl_bytes": 1056720
+      },
+      {
+        "label": "dense 250x500",
+        "m": 250,
+        "n": 500,
+        "nnz": 125000,
+        "t_model_build_s": 0.14003446901915595,
+        "t_nl_write_s": 0.24649864400271326,
+        "t_asl_read_s": 0.24499129701871425,
+        "t_first_jac_s": 0.0030319479992613196,
+        "t_warm_jac_s": 0.0004917860496789217,
+        "nl_bytes": 2936925
+      },
+      {
+        "label": "dense 500x1000",
+        "m": 500,
+        "n": 1000,
+        "nnz": 500000,
+        "t_model_build_s": 0.5110036779660732,
+        "t_nl_write_s": 0.9977002439554781,
+        "t_asl_read_s": 0.9862342770211399,
+        "t_first_jac_s": 0.013463351991958916,
+        "t_warm_jac_s": 0.0013956670300103724,
+        "nl_bytes": 11780750
+      },
+      {
+        "label": "dense 1000x2000",
+        "m": 1000,
+        "n": 2000,
+        "nnz": 2000000,
+        "t_model_build_s": 2.048473873990588,
+        "t_nl_write_s": 4.106522065994795,
+        "t_asl_read_s": 4.061580387002323,
+        "t_first_jac_s": 0.04666216502664611,
+        "t_warm_jac_s": 0.009524084976874292,
+        "nl_bytes": 48197417
+      },
+      {
+        "label": "dense 2000x4000",
+        "m": 2000,
+        "n": 4000,
+        "nnz": 8000000,
+        "t_model_build_s": 7.723745687981136,
+        "t_nl_write_s": 16.629329646995757,
+        "t_asl_read_s": 16.463144762034062,
+        "t_first_jac_s": 0.19866427697706968,
+        "t_warm_jac_s": 0.04309489100705832,
+        "nl_bytes": 194921204
+      },
+      {
+        "label": "diag 100000",
+        "m": 100000,
+        "n": 100000,
+        "nnz": 100000,
+        "t_model_build_s": 0.8316692810039967,
+        "t_nl_write_s": 1.3325986369745806,
+        "t_asl_read_s": 0.4053924389882013,
+        "t_first_jac_s": 0.004969928995706141,
+        "t_warm_jac_s": 0.0004554190090857446,
+        "nl_bytes": 4256121
+      },
+      {
+        "label": "diag 1000000",
+        "m": 1000000,
+        "n": 1000000,
+        "nnz": 1000000,
+        "t_model_build_s": 8.64189010701375,
+        "t_nl_write_s": 14.818698806979228,
+        "t_asl_read_s": 4.285607481957413,
+        "t_first_jac_s": 0.04690737696364522,
+        "t_warm_jac_s": 0.0045033509959466755,
+        "nl_bytes": 46556126
+      }
+    ]
+  }
+}

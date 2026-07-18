@@ -1,0 +1,92 @@
+{
+  "meta": {
+    "date": "2026-07-17/18",
+    "machine": "MacBook Pro (15-inch, 2018), 6-core Intel i7-8850H, 16 GB RAM, macOS 15.7",
+    "python": "3.14.4",
+    "numpy": "2.4.6",
+    "scipy": "1.17.1",
+    "blas_threads": 1,
+    "problems_module": "_lowered_data.py (4 representative problems; CVaRSlice = benchmark CVaR generator at 8192 scenarios)",
+    "verification": "--verify and --verify-full ALL MATCH vs cvxpy get_problem_data(CLARABEL, ignore_dpp) before timing",
+    "tool": "JuMP 1.30.1 / MathOptInterface 1.51.2 copy_to into MatrixOfConstraints cache (no AD), Julia 1.10.5, --threads=1",
+    "harness": "julia_compare.py --time --tool jump (worker julia/jump_main.jl)"
+  },
+  "results": [
+    {
+      "name": "SimpleQP",
+      "size": "full",
+      "parametric": false,
+      "tool": "jump",
+      "julia_single_s": 0.740432297,
+      "julia_single_native_s": 0.740432297,
+      "julia_single_jacgrad_s": NaN,
+      "julia_single_iter1_s": 0.740432297,
+      "julia_resolve_s": NaN,
+      "julia_build_s": 5.506707706,
+      "julia_worker_wall_s": 36.86170927301282,
+      "stages_iter1": {},
+      "versions": {
+        "JuMP": "1.30.1",
+        "MathOptInterface": "1.51.2",
+        "julia": "1.10.5"
+      }
+    },
+    {
+      "name": "LeastSquares",
+      "size": "full",
+      "parametric": false,
+      "tool": "jump",
+      "julia_single_s": 0.759655315,
+      "julia_single_native_s": 0.759655315,
+      "julia_single_jacgrad_s": NaN,
+      "julia_single_iter1_s": 0.821705775,
+      "julia_resolve_s": NaN,
+      "julia_build_s": 5.403302399,
+      "julia_worker_wall_s": 34.58858901099302,
+      "stages_iter1": {},
+      "versions": {
+        "JuMP": "1.30.1",
+        "MathOptInterface": "1.51.2",
+        "julia": "1.10.5"
+      }
+    },
+    {
+      "name": "ParametrizedQP",
+      "size": "full",
+      "parametric": true,
+      "tool": "jump",
+      "julia_single_s": 0.830888995,
+      "julia_single_native_s": 0.830888995,
+      "julia_single_jacgrad_s": NaN,
+      "julia_single_iter1_s": 0.833199687,
+      "julia_resolve_s": 0.6324178695,
+      "julia_build_s": 5.449280996,
+      "julia_worker_wall_s": 52.49949401704362,
+      "stages_iter1": {},
+      "versions": {
+        "JuMP": "1.30.1",
+        "MathOptInterface": "1.51.2",
+        "julia": "1.10.5"
+      }
+    },
+    {
+      "name": "CVaRSlice",
+      "size": "slice",
+      "parametric": false,
+      "tool": "jump",
+      "julia_single_s": 0.074719381,
+      "julia_single_native_s": 0.074719381,
+      "julia_single_jacgrad_s": NaN,
+      "julia_single_iter1_s": 0.05540356,
+      "julia_resolve_s": NaN,
+      "julia_build_s": 1.64507755,
+      "julia_worker_wall_s": 20.756441496952903,
+      "stages_iter1": {},
+      "versions": {
+        "JuMP": "1.30.1",
+        "MathOptInterface": "1.51.2",
+        "julia": "1.10.5"
+      }
+    }
+  ]
+}

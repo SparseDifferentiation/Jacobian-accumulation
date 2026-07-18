@@ -18,4 +18,11 @@ dependencies = [
 jax = [
     "jax[cpu]",
 ]
+# AMPL Solver Library comparison: Pyomo writes .nl files, PyNumero's AslNLP loads
+# them through the real ASL. The compiled libpynumero_ASL is fetched separately --
+# see canonicalization/README.md.
+asl = [
+    "pyomo",
+    "packaging",  # PyNumero imports it (optional pyomo dep, required in practice)
+]
 
