@@ -428,6 +428,11 @@ def _optimal_advertising(full, theta):
         shape=(2 * m, m))
     b_pairs = np.zeros(2 * m)
     b_pairs[1::2] = B0.ravel()
+    # convention: b := g(0) under IEEE evaluation.  R0 can contain NaN (the
+    # generator's 0/0 lognormal at full size -- see the non-finite-data
+    # upstream report), and 0 * NaN = NaN, so hypograph rows with NaN
+    # coefficients carry NaN constants in cvxpy's lowering.
+    b_pairs[0::2][np.isnan(RP).any(axis=1)] = np.nan
     # T - D'1 rows: row j has -1 on D columns i + m*j ... coefficient +1 => A has +1
     rj = np.repeat(np.arange(n), m)
     cj = np.tile(np.arange(m), n) + m * rj

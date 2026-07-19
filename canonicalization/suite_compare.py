@@ -266,6 +266,8 @@ def run_jump_worker(name: str, full: bool, theta, td: Path, dump: bool,
     blocks = build_blocks(name, full, theta)
     data_npz = td / f"{name}_blocks.npz"
     save_blocks_npz(blocks, data_npz)
+    del blocks          # keep the parent lean while the worker runs
+    gc.collect()
     spec_small = _spec(name, False)
     theta_small = _theta(spec_small)
     warm_npz = td / f"{name}_blocks_small.npz"
@@ -420,7 +422,11 @@ def verify(name: str, full: bool, tool: str) -> bool:
 
     spec = _spec(name, full)
     theta = _theta(spec)
-    data = reference_data(name, full, theta)
+    if USE_REF_CACHE:   # warm the cache while nothing else is resident
+        reference_data(name, full, theta)
+        gc.collect()
+    # run the worker BEFORE holding the reference in memory: the parent's
+    # resident set stays minimal while the (possibly multi-GB) worker runs
     if tool == "jump":
         with tempfile.TemporaryDirectory() as td:
             res = run_jump_worker(name, full, theta, Path(td), dump=True,
@@ -428,6 +434,7 @@ def verify(name: str, full: bool, tool: str) -> bool:
     else:
         res = run_asl_worker(name, full, "verify")
     mats = res["_mats"]
+    data = reference_data(name, full, theta)
 
     ok, msgs = True, []
     good, msg = _sparse_close(_coo(mats, "A", tool), sps.csc_matrix(data["A"]))

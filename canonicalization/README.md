@@ -203,9 +203,55 @@ Fairness / boundary notes (mirroring the CasADi rules above):
 - Cone rows are metadata everywhere: ASL sees affine bodies with ==/>= tags,
   JuMP the genuine MOI cone sets; extraction cost is set-agnostic.
 
-The same machinery scales to the full suite via `_lowered_blocks.py` (a
-tool-neutral lowered form per problem, verified against the same CVXPY ground
-truth) and `suite_compare.py --tool jump|asl` — see those files' docstrings.
+### Full-suite results (JuMP and ASL, 2026-07-18/19)
+
+`_lowered_blocks.py` (tool-neutral lowered form per problem) +
+`suite_compare.py --tool jump|asl` extend both comparisons to the whole
+CasADi-comparison problem set. Coverage: JuMP 20/21 (SlowPruning's 8.4M-nnz
+kron block exceeds this 16 GB machine through the harness path; small-size
+MATCH), ASL 19/21 (SimpleLP and SlowPruning exceed the scalar `pyomo.environ`
+modeling layer; the `ASL_MODEL_LAYER=kernel` matrix_constraint layer removes
+that ceiling and is small-size verified — full-size rerun pending). Every
+timed problem is full-size verified bit-identical first (`max|diff|=0`
+throughout; the one interesting incident: OptimalAdvertising's generator
+produces a NaN coefficient at full size, and CVXPY's b carries `0·NaN = NaN`
+— the blocks encode the same IEEE `b := g(0)` convention). Cold single
+extraction, benchmark sizes:
+
+| Problem | engine | CasADi | JuMP `copy_to` | ASL nl+read+eval | ASL derivative evals only |
+|---|---|---|---|---|---|
+| SimpleLP (10⁷) | 5.0 s | 38.1 s | 42.0 s | — | — |
+| ScalarParamLP | 1.0 s | 4.6 s | 1.2 s | 81.6 s | 0.49 s |
+| FullParamLP | 0.48 s | 2.4 s | 0.53 s | 39.0 s | 0.16 s |
+| LeastSquares | 1.6 s | 36.6 s | 0.79 s | 58.1 s | 0.43 s |
+| SimpleQP | 1.7 s | 53.7 s | 0.76 s | 77.1 s | 0.68 s |
+| ParametrizedQP | 2.5 s | 771.5 s | 0.79 s | 59.9 s | 0.51 s |
+| HuberRegression | 1.9 s | 42.3 s | 0.71 s | 57.5 s | 0.55 s |
+| SVM + L1 | 1.8 s | 145.5 s | 0.59 s | 52.3 s | 0.35 s |
+| ConeMatrixStuffing | 3.9 s | 6.1 s | 2 ms | 114 ms | 1 ms |
+| SmallMatrixStuffing | 2.7 s | 2.8 s | 1 ms | 97 ms | 1 ms |
+| ParamConeStuffing | 143 ms | 4 ms | 0.2 ms | 8 ms | 0.5 ms |
+| ParamSmallStuffing | 210 ms | 7 ms | 0.2 ms | 10 ms | 0.5 ms |
+| Yitzhaki | 0.47 s | 8.7 s | 162 ms | 20.4 s | 123 ms |
+| Murray | 3.5 s | 25.9 s | 171 ms | 11.0 s | 62 ms |
+| Cajas | 1.1 s | 4.9 s | 112 ms | 11.8 s | 87 ms |
+| OptimalAdvertising | 6.2 s | 9.5 s | 163 ms | 7.0 s | 41 ms |
+| FactorCovarianceModel | 2.0 s | 250.4 s | 371 ms | 29.4 s | 226 ms |
+| ConvexPlasticity | 2.3 s | 133 ms | 17 ms | 1.1 s | 14 ms |
+| TvInpainting | 1.1 s | 8.2 s | 854 ms | 45.1 s | 219 ms |
+| SDP | 2.1 s | 66.4 s | 120 ms | 10.6 s | 78 ms |
+
+The last column is the point about ASL: its *derivative* work (constraint
+eval + Jacobian + Hessian-of-Lagrangian + gradient) is 0.5 ms–0.7 s on every
+problem — ParametrizedQP's derivatives cost ASL 0.51 s where CasADi pays
+771 s. Everything else in ASL's pipeline is ASCII .nl serialization. JuMP's
+`copy_to` is the assembly floor (its macro layer, `build_s` in the results
+files, is where its coefficient gathering actually happens — 7–9 s typical,
+29 min at n=10⁷); the engine performs full canonicalization from the DCP atom
+tree while staying within a few seconds of that floor. CasADi wins where its
+paradigm wins (structured-sparse ConvexPlasticity, tiny problems); the
+dense-data problems are where discovery collapses. Raw files:
+`results/results_suite_{jump,asl}_compare_2026071[89].json`.
 
 ## Files
 
