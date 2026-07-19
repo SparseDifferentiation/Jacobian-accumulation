@@ -1,0 +1,66 @@
+{
+  "meta": {
+    "date": "2026-07-19",
+    "machine": "MacBook Pro (15-inch, 2018), 6-core Intel i7-8850H, 16 GB RAM, macOS 15.7",
+    "definition": "cold end-to-end seconds = user-model construction + problem-data extraction, one shot. engine: cp.Problem build + get_problem_data (median of 3, fresh). casadi: casadi_build_s + casadi_single_s (suite). jump: idiomatic macro build (4-problem worker) or generic block build (FactorCov, ConeStuffing) + copy_to. asl: Pyomo environ build + nl write/read/evals. sct: closure build + detection/coloring/eval. CVaRSlice casadi = probe number (no build split) omitted.",
+    "note": "JuMP/ASL/SCT builds are post-JIT / warm-process; JuMP's macro layer is where its coefficient assembly happens, so end-to-end is its honest one-shot cost while copy_to alone is its floor."
+  },
+  "columns": [
+    "problem",
+    "engine_e2e_s",
+    "casadi_e2e_s",
+    "jump_e2e_s",
+    "asl_e2e_s",
+    "sct_e2e_s"
+  ],
+  "rows": [
+    [
+      "SimpleQP",
+      1.8453010559896939,
+      56.6650984959997,
+      6.247140003,
+      88.93441849609371,
+      86.046277045
+    ],
+    [
+      "LeastSquares",
+      1.7670525760040618,
+      39.39862914400874,
+      6.162957714,
+      66.57228676986415,
+      90.90076241400003
+    ],
+    [
+      "ParametrizedQP",
+      3.154523990000598,
+      771.627779536997,
+      6.280169990999999,
+      69.43383256206289,
+      111.588883579
+    ],
+    [
+      "FactorCovarianceModel",
+      3.5716546699986793,
+      251.88693570399482,
+      4.400256237000001,
+      85.83189351495821,
+      null
+    ],
+    [
+      "ConeMatrixStuffing",
+      4.56242040800862,
+      11.894036812023842,
+      0.009835842000000001,
+      1.3591591829899698,
+      null
+    ],
+    [
+      "CVaRSlice",
+      0.8979055300005712,
+      null,
+      1.719796931,
+      14.874106933828443,
+      51.541312960000006
+    ]
+  ]
+}
