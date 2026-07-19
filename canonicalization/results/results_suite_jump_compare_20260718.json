@@ -1,0 +1,181 @@
+{
+  "meta": {
+    "date": "2026-07-18",
+    "machine": "MacBook Pro (15-inch, 2018), 6-core Intel i7-8850H, 16 GB RAM, macOS 15.7",
+    "tool": "JuMP 1.30.1 / MathOptInterface 1.51.2 copy_to into MatrixOfConstraints cache (no AD), Julia 1.10.5 --threads=1",
+    "harness": "suite_compare.py --time --tool jump (generic worker julia/jump_generic.jl over _lowered_blocks.py)",
+    "coverage": "12 of 21 problems (full-size verified green, max|diff|=0); SlowPruning..SemidefiniteProgramming pending full-size verification after an OOM-killed verify phase -- to be verified one-per-process and timed via --only, then merged",
+    "columns": "single_s = MOI.copy_to (canonicalization analog); build_s = JuMP macro model build, excluded from single, reported; resolve_s = fresh copy_to (no vectorized parameter refresh in base JuMP)",
+    "verification": "suite_verify_jump_full.json gate; every timed problem bit-identical vs cvxpy CLARABEL data"
+  },
+  "results": [
+    {
+      "name": "SimpleLP",
+      "parametric": false,
+      "tool": "jump",
+      "single_s": 41.980759401,
+      "single_iter1_s": 26.242863236,
+      "build_s": 1764.823822197,
+      "resolve_s": null,
+      "versions": {
+        "JuMP": "1.30.1",
+        "MathOptInterface": "1.51.2",
+        "julia": "1.10.5"
+      }
+    },
+    {
+      "name": "SimpleScalarParametrizedLP",
+      "parametric": true,
+      "tool": "jump",
+      "single_s": 1.158180928,
+      "single_iter1_s": 1.158180928,
+      "build_s": 31.230787953,
+      "resolve_s": 1.249035452,
+      "versions": {
+        "JuMP": "1.30.1",
+        "MathOptInterface": "1.51.2",
+        "julia": "1.10.5"
+      }
+    },
+    {
+      "name": "SimpleFullyParametrizedLP",
+      "parametric": true,
+      "tool": "jump",
+      "single_s": 0.531818259,
+      "single_iter1_s": 0.580733984,
+      "build_s": 8.076614213,
+      "resolve_s": 0.587324124,
+      "versions": {
+        "JuMP": "1.30.1",
+        "MathOptInterface": "1.51.2",
+        "julia": "1.10.5"
+      }
+    },
+    {
+      "name": "LeastSquares",
+      "parametric": false,
+      "tool": "jump",
+      "single_s": 0.789875716,
+      "single_iter1_s": 0.789875716,
+      "build_s": 8.848164268,
+      "resolve_s": null,
+      "versions": {
+        "JuMP": "1.30.1",
+        "MathOptInterface": "1.51.2",
+        "julia": "1.10.5"
+      }
+    },
+    {
+      "name": "SimpleQP",
+      "parametric": false,
+      "tool": "jump",
+      "single_s": 0.764165903,
+      "single_iter1_s": 0.733861684,
+      "build_s": 8.990333599,
+      "resolve_s": null,
+      "versions": {
+        "JuMP": "1.30.1",
+        "MathOptInterface": "1.51.2",
+        "julia": "1.10.5"
+      }
+    },
+    {
+      "name": "ParametrizedQP",
+      "parametric": true,
+      "tool": "jump",
+      "single_s": 0.785190788,
+      "single_iter1_s": 0.785190788,
+      "build_s": 8.791840257,
+      "resolve_s": 0.6428846735,
+      "versions": {
+        "JuMP": "1.30.1",
+        "MathOptInterface": "1.51.2",
+        "julia": "1.10.5"
+      }
+    },
+    {
+      "name": "HuberRegression",
+      "parametric": false,
+      "tool": "jump",
+      "single_s": 0.713597668,
+      "single_iter1_s": 0.725434508,
+      "build_s": 9.236861807,
+      "resolve_s": null,
+      "versions": {
+        "JuMP": "1.30.1",
+        "MathOptInterface": "1.51.2",
+        "julia": "1.10.5"
+      }
+    },
+    {
+      "name": "SVMWithL1Regularization",
+      "parametric": true,
+      "tool": "jump",
+      "single_s": 0.59188335,
+      "single_iter1_s": 0.576957146,
+      "build_s": 7.414404854,
+      "resolve_s": 0.5783650145,
+      "versions": {
+        "JuMP": "1.30.1",
+        "MathOptInterface": "1.51.2",
+        "julia": "1.10.5"
+      }
+    },
+    {
+      "name": "ConeMatrixStuffing",
+      "parametric": false,
+      "tool": "jump",
+      "single_s": 0.001677291,
+      "single_iter1_s": 0.001907948,
+      "build_s": 0.008158551,
+      "resolve_s": null,
+      "versions": {
+        "JuMP": "1.30.1",
+        "MathOptInterface": "1.51.2",
+        "julia": "1.10.5"
+      }
+    },
+    {
+      "name": "SmallMatrixStuffing",
+      "parametric": false,
+      "tool": "jump",
+      "single_s": 0.001137618,
+      "single_iter1_s": 0.001654431,
+      "build_s": 0.006386209,
+      "resolve_s": null,
+      "versions": {
+        "JuMP": "1.30.1",
+        "MathOptInterface": "1.51.2",
+        "julia": "1.10.5"
+      }
+    },
+    {
+      "name": "ParamConeMatrixStuffing",
+      "parametric": true,
+      "tool": "jump",
+      "single_s": 0.000190649,
+      "single_iter1_s": 0.000195985,
+      "build_s": 0.000399449,
+      "resolve_s": 0.000180185,
+      "versions": {
+        "JuMP": "1.30.1",
+        "MathOptInterface": "1.51.2",
+        "julia": "1.10.5"
+      }
+    },
+    {
+      "name": "ParamSmallMatrixStuffing",
+      "parametric": true,
+      "tool": "jump",
+      "single_s": 0.000222591,
+      "single_iter1_s": 0.000222591,
+      "build_s": 0.000543681,
+      "resolve_s": 0.000196546,
+      "versions": {
+        "JuMP": "1.30.1",
+        "MathOptInterface": "1.51.2",
+        "julia": "1.10.5"
+      }
+    }
+  ]
+}

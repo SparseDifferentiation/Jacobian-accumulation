@@ -207,10 +207,14 @@ def asl_extract(model, td: Path, with_matrices: bool = True):
     from pyomo.contrib.pynumero.interfaces.ampl_nlp import AslNLP
 
     nl = td / "m.nl"
-    io_options = {"symbolic_solver_labels": True} if with_matrices else {}
+    is_kernel = hasattr(model, "_con_names")   # pyomo.kernel blocks (suite v2)
     gc.collect()
     t0 = time.perf_counter()
-    model.write(str(nl), io_options=io_options)
+    if is_kernel:
+        model.write(str(nl), format="nl", symbolic_solver_labels=with_matrices)
+    else:
+        model.write(str(nl), io_options=(
+            {"symbolic_solver_labels": True} if with_matrices else {}))
     t_write = time.perf_counter() - t0
 
     gc.collect()
@@ -248,11 +252,14 @@ def asl_extract(model, td: Path, with_matrices: bool = True):
 
     # undo the nl writer's (deterministic) row/col permutation; dropped
     # rows/columns (all-zero coefficients) scatter back as structural zeros
-    import pyomo.environ as pyo
-    con_names = [con.name for con in
-                 model.component_data_objects(pyo.Constraint, active=True)]
-    var_names = [v.name for v in
-                 model.component_data_objects(pyo.Var, active=True)]
+    if is_kernel:
+        con_names, var_names = model._con_names, model._var_names
+    else:
+        import pyomo.environ as pyo
+        con_names = [con.name for con in
+                     model.component_data_objects(pyo.Constraint, active=True)]
+        var_names = [v.name for v in
+                     model.component_data_objects(pyo.Var, active=True)]
     J = sps.csr_matrix(J)
     Sr = _scatter_from_names(td / "m.row", con_names, J.shape[0])
     Sc = _scatter_from_names(td / "m.col", var_names, J.shape[1])

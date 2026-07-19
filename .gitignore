@@ -12,6 +12,7 @@ canonicalization/results_*.txt
 canonicalization/results_*.json
 canonicalization/probes/_*.log
 canonicalization/suite_verify_*.json
+canonicalization/.ref_cache/
 
 # ADOL-C build artifacts
 jacobian/ADOL-C/

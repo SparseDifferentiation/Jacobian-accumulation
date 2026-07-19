@@ -56,7 +56,15 @@ TIMEOUT = float(os.environ.get("BENCH_TIMEOUT", "3600"))
 JULIA = os.environ.get("JULIA", "julia")
 
 KIND_CODE = {"zero": 0, "nonneg": 1, "soc": 2, "psd": 3}
-ASL_SKIP_FULL = {"SimpleLP"}   # 2e7 Pyomo constraint objects; modeling-layer limit
+# ASL modeling layer: "environ" builds scalar Constraint objects (one Python
+# object per row); "kernel" uses pyomo.kernel matrix_constraint, which takes
+# the sparse coefficient block directly -- vectorized like cvxcore/JuMP.
+ASL_LAYER = os.environ.get("ASL_MODEL_LAYER", "environ")
+
+# environ-layer memory limits (not ASL limits): SimpleLP needs 2e7 scalar
+# constraint objects, SlowPruning an 8.4M-term expression layer (worker OOMs
+# on 16 GB).  The kernel layer has no such ceiling.
+ASL_SKIP_FULL = {"SimpleLP", "SlowPruning"} if ASL_LAYER == "environ" else set()
 
 ENV1 = {"OMP_NUM_THREADS": "1", "OPENBLAS_NUM_THREADS": "1",
         "MKL_NUM_THREADS": "1", "VECLIB_MAXIMUM_THREADS": "1"}
@@ -72,13 +80,58 @@ def _theta(spec, size_rng=None):
     return spec.draw(rng) if spec.parametric else []
 
 
+REF_CACHE = HERE / ".ref_cache"
+USE_REF_CACHE = os.environ.get("SUITE_REF_CACHE", "1") != "0"
+
+
+def _cache_load(key: Path):
+    z = np.load(key)
+    data = {
+        "A": sps.csc_matrix((z["A_data"], z["A_indices"], z["A_indptr"]),
+                            shape=tuple(z["A_shape"])),
+        "b": z["b"], "c": z["c"],
+    }
+    data["P"] = None if bool(z["P_absent"]) else sps.csc_matrix(
+        (z["P_data"], z["P_indices"], z["P_indptr"]), shape=tuple(z["P_shape"]))
+    return data
+
+
+def _cache_save(key: Path, data):
+    A = sps.csc_matrix(data["A"])
+    out = {"A_data": A.data, "A_indices": A.indices, "A_indptr": A.indptr,
+           "A_shape": np.asarray(A.shape),
+           "b": np.asarray(data["b"]).ravel(), "c": np.asarray(data["c"]).ravel()}
+    P = data.get("P")
+    out["P_absent"] = np.bool_(P is None)
+    if P is not None:
+        P = sps.csc_matrix(P)
+        out.update(P_data=P.data, P_indices=P.indices, P_indptr=P.indptr,
+                   P_shape=np.asarray(P.shape))
+    REF_CACHE.mkdir(exist_ok=True)
+    tmp = key.with_suffix(".tmp.npz")
+    np.savez(tmp, **out)
+    tmp.replace(key)
+
+
 def reference_data(name: str, full: bool, theta):
+    """CVXPY's (P, c, A, b) ground truth, cached on disk.
+
+    The reference is deterministic (fixed seeds, theta drawn from
+    default_rng(42)), so name+size is a sufficient key.  After changing any
+    problem model or the CVXPY version, clear canonicalization/.ref_cache/
+    (or run with SUITE_REF_CACHE=0)."""
+    key = REF_CACHE / f"{name}_{'full' if full else 'small'}.npz"
+    if USE_REF_CACHE and key.exists():
+        return _cache_load(key)
     import cvxpy as cp
     spec = _spec(name, full)
     prob, params = spec.cvxpy_build()
     for p, v in zip(params, theta):
         p.value = v
     data, _, _ = prob.get_problem_data(solver=cp.CLARABEL, ignore_dpp=True)
+    if USE_REF_CACHE:
+        _cache_save(key, {"A": data["A"], "b": data["b"], "c": data["c"],
+                          "P": data.get("P")})
     return data
 
 
@@ -160,6 +213,54 @@ def build_pyomo_model(bl: dict):
 # --------------------------------------------------------------------------- #
 # workers
 # --------------------------------------------------------------------------- #
+def build_pyomo_kernel_model(bl: dict):
+    """Vectorized ASL model: pyomo.kernel matrix_constraint per row block.
+
+    Bodies are -A_blk z with lb = -b (and ub = -b for zero-cone rows), so the
+    extraction conventions (A = -J, b = cons0 - lb) match the environ builder
+    exactly.  The objective uses the same LinearExpression fast paths."""
+    import pyomo.kernel as pmo
+    from pyomo.core.kernel.matrix_constraint import matrix_constraint
+    from pyomo.core.expr.numeric_expr import LinearExpression
+
+    nz = sum(l for _, l in bl["segments"])
+    m = pmo.block()
+    m.z = pmo.variable_list(pmo.variable() for _ in range(nz))
+    zs = list(m.z)
+
+    c = np.asarray(bl["c"], float)
+    idx = np.nonzero(c)[0]
+    lin = LinearExpression(constant=0.0, linear_coefs=c[idx].tolist(),
+                           linear_vars=[zs[j] for j in idx]) if idx.size else 0.0
+    if bl["P"] is not None and bl["P"].nnz:
+        Pc = sps.csr_matrix(bl["P"])
+        terms = []
+        for i in range(nz):
+            lo, hi = Pc.indptr[i], Pc.indptr[i + 1]
+            if hi > lo:
+                terms.append(zs[i] * LinearExpression(
+                    constant=0.0,
+                    linear_coefs=(0.5 * Pc.data[lo:hi]).tolist(),
+                    linear_vars=[zs[j] for j in Pc.indices[lo:hi]]))
+        m.obj = pmo.objective(sum(terms) + lin)
+    else:
+        m.obj = pmo.objective(lin if idx.size else 0.0)
+
+    m.gblocks = pmo.constraint_dict()
+    con_names = []
+    for k, blk in enumerate(bl["rows"]):
+        A = sps.csr_matrix(blk["A"])
+        b = np.asarray(blk["b"], float)
+        eq = blk["kind"] == "zero"
+        m.gblocks[k] = matrix_constraint(
+            -A, lb=-b, ub=(-b if eq else None), x=zs)
+        con_names.extend(row.name for row in m.gblocks[k])
+    # explicit name lists: kernel blocks lack component_data_objects
+    m._con_names = con_names
+    m._var_names = [v.name for v in zs]
+    return m
+
+
 def run_jump_worker(name: str, full: bool, theta, td: Path, dump: bool,
                     resolves: int, iters: int) -> dict:
     blocks = build_blocks(name, full, theta)
@@ -199,6 +300,8 @@ def run_jump_worker(name: str, full: bool, theta, td: Path, dump: bool,
 def asl_worker(name: str, size_key: str, mode: str, out_path: str):
     from asl_compare import asl_extract
 
+    builder = (build_pyomo_kernel_model if ASL_LAYER == "kernel"
+               else build_pyomo_model)
     full = size_key == "full"
     spec = _spec(name, full)
     theta = _theta(spec)
@@ -213,7 +316,7 @@ def asl_worker(name: str, size_key: str, mode: str, out_path: str):
         bl = build_blocks(name, full, theta)
         t_blocks = time.perf_counter() - t0
         t0 = time.perf_counter()
-        model = build_pyomo_model(bl)
+        model = builder(bl)
         return model, t_blocks, time.perf_counter() - t0
 
     if mode == "verify":
@@ -266,7 +369,7 @@ def asl_worker(name: str, size_key: str, mode: str, out_path: str):
         for _ in range(REWRITES):
             theta_new = spec.draw(rng)
             bl = build_blocks(name, full, theta_new)
-            model = build_pyomo_model(bl)
+            model = builder(bl)
             with tempfile.TemporaryDirectory() as td:
                 _, _, _, _, _, stages = asl_extract(model, Path(td),
                                                     with_matrices=False)
@@ -426,8 +529,10 @@ def main():
                 print(f"  {n:<28s}: ERROR {str(exc)[:200]}", flush=True)
         print("ALL MATCH" if all(oks.values()) else
               f"MISMATCHES: {[n for n, v in oks.items() if not v]}")
-        (HERE / f"suite_verify_{args.tool}_{'full' if full else 'small'}.json"
-         ).write_text(json.dumps(oks, indent=2))
+        gate = HERE / f"suite_verify_{args.tool}_{'full' if full else 'small'}.json"
+        merged = json.loads(gate.read_text()) if gate.exists() else {}
+        merged.update(oks)      # --only subsets accumulate instead of clobbering
+        gate.write_text(json.dumps(merged, indent=2))
         if not all(oks.values()):
             raise SystemExit(1)
 
