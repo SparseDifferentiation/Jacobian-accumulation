@@ -24,5 +24,11 @@ jax = [
 asl = [
     "pyomo",
     "packaging",  # PyNumero imports it (optional pyomo dep, required in practice)
+    # AMPL-native pipeline (suite_compare ASL_MODEL_LAYER=ampl): amplpy plus
+    # pandas for bulk set_data; the AMPL engine itself comes from
+    #   uv pip install --index-url https://pypi.ampl.com ampl_module_base
+    # and needs a (free CE/academic) license -- see .ampl_ce_license.txt.
+    "amplpy",
+    "pandas",
 ]
 

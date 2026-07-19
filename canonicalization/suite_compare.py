@@ -261,6 +261,96 @@ def build_pyomo_kernel_model(bl: dict):
     return m
 
 
+def ampl_extract(bl: dict, td: Path, with_matrices: bool = True):
+    """AMPL-native pipeline: model in the AMPL engine (amplpy), C translator
+    writing BINARY .nl, then the shared AslNLP read/eval/scatter.
+
+    Constraint bodies are -(A_blk z) with rhs -b (kernel-layer convention), so
+    A = -J and b = cons0 - lb hold unchanged.  `option presolve 0` keeps the
+    instance verbatim -- AMPL's presolve would otherwise drop rows/tighten
+    bounds and break bit-identical verification.  Stages: t_data_s (declares +
+    Python->AMPL data transfer; the model-build analog, excluded from
+    single_s), t_translate_s (genmod + binary write), then the shared read/
+    eval timers."""
+    import pandas as pd
+    from amplpy import AMPL
+    from asl_compare import asl_read_extract
+
+    nz = sum(l for _, l in bl["segments"])
+    ampl = AMPL()
+    try:
+        ampl.option["presolve"] = 0
+        ampl.option["auxfiles"] = "rc" if with_matrices else ""
+
+        gc.collect()
+        t0 = time.perf_counter()
+        decls = [f"var z {{0..{nz - 1}}};"]
+        con_names = []
+        for k, blk in enumerate(bl["rows"]):
+            m = blk["A"].shape[0]
+            rel = "=" if blk["kind"] == "zero" else ">="
+            decls += [
+                f"set NZ{k} dimen 2;",
+                f"param mc{k} {{NZ{k}}};",
+                f"param mb{k} {{0..{m - 1}}} default 0;",
+                f"s.t. g{k} {{i in 0..{m - 1}}}: "
+                f"sum {{(i,j) in NZ{k}}} mc{k}[i,j]*z[j] {rel} mb{k}[i];",
+            ]
+            con_names.extend(f"g{k}[{i}]" for i in range(m))
+        obj_terms = []
+        P = bl["P"]
+        cvec = np.asarray(bl["c"], float)
+        cidx = np.nonzero(cvec)[0]
+        if P is not None and P.nnz:
+            decls += ["set PNZ dimen 2;", "param pv {PNZ};"]
+            obj_terms.append("sum {(i,j) in PNZ} 0.5*pv[i,j]*z[i]*z[j]")
+        if cidx.size:
+            decls += ["set CNZ;", "param cv {CNZ};"]
+            obj_terms.append("sum {j in CNZ} cv[j]*z[j]")
+        decls.append("minimize obj: "
+                     + (" + ".join(obj_terms) if obj_terms else "0") + ";")
+        ampl.eval("\n".join(decls))
+
+        for k, blk in enumerate(bl["rows"]):
+            A = sps.coo_matrix(blk["A"])
+            df = pd.DataFrame({"i": A.row.astype(np.int64),
+                               "j": A.col.astype(np.int64),
+                               f"mc{k}": -A.data}).set_index(["i", "j"])
+            ampl.set_data(df, f"NZ{k}")
+            b = np.asarray(blk["b"], float)
+            nzb = np.nonzero(b)[0]
+            if nzb.size:
+                ampl.get_parameter(f"mb{k}").set_values(
+                    pd.Series(-b[nzb], index=nzb.astype(np.int64)))
+        if P is not None and P.nnz:
+            Pc = sps.coo_matrix(P)
+            dfp = pd.DataFrame({"i": Pc.row.astype(np.int64),
+                                "j": Pc.col.astype(np.int64),
+                                "pv": Pc.data}).set_index(["i", "j"])
+            ampl.set_data(dfp, "PNZ")
+        if cidx.size:
+            dfc = pd.DataFrame({"j": cidx.astype(np.int64),
+                                "cv": cvec[cidx]}).set_index(["j"])
+            ampl.set_data(dfc, "CNZ")
+        t_data = time.perf_counter() - t0
+
+        nl = td / "m.nl"
+        gc.collect()
+        t0 = time.perf_counter()
+        ampl.eval(f'write "b{td}/m";')
+        t_translate = time.perf_counter() - t0
+    finally:
+        ampl.close()
+
+    var_names = [f"z[{j}]" for j in range(nz)] if with_matrices else None
+    P_, c_, A_, b_, nlp, stages = asl_read_extract(
+        nl, td, con_names if with_matrices else None, var_names, with_matrices)
+    stages["t_data_s"] = t_data
+    stages["t_translate_s"] = t_translate
+    stages["single_s"] = t_translate + stages["single_aslread_s"]
+    return P_, c_, A_, b_, nlp, stages
+
+
 def run_jump_worker(name: str, full: bool, theta, td: Path, dump: bool,
                     resolves: int, iters: int) -> dict:
     blocks = build_blocks(name, full, theta)
@@ -312,21 +402,29 @@ def asl_worker(name: str, size_key: str, mode: str, out_path: str):
     def flush():
         Path(out_path).write_text(json.dumps(result))
 
-    def build_model_timed():
+    def extract(td: Path, with_matrices: bool, th):
+        """blocks -> (chosen model layer) -> extraction.  Returns
+        (P, c, A, b, nlp, stages, build_s): build_s is the modeling-layer
+        analog (block assembly + pyomo objects, or block assembly + AMPL
+        declares/data transfer)."""
         gc.collect()
         t0 = time.perf_counter()
-        bl = build_blocks(name, full, theta)
+        bl = build_blocks(name, full, th)
         t_blocks = time.perf_counter() - t0
+        if ASL_LAYER == "ampl":
+            P, c, A, b, nlp, stages = ampl_extract(bl, td, with_matrices)
+            return P, c, A, b, nlp, stages, t_blocks + stages["t_data_s"]
         t0 = time.perf_counter()
         model = builder(bl)
-        return model, t_blocks, time.perf_counter() - t0
+        t_model = time.perf_counter() - t0
+        P, c, A, b, nlp, stages = asl_extract(model, td, with_matrices)
+        return P, c, A, b, nlp, stages, t_blocks + t_model
 
     if mode == "verify":
-        model, t_blocks, t_model = build_model_timed()
         with tempfile.TemporaryDirectory() as td:
-            P, c, A, b, _, stages = asl_extract(model, Path(td), with_matrices=True)
+            P, c, A, b, _, stages, build_s = extract(Path(td), True, theta)
         result.update(stages)
-        result["t_blocks_s"], result["t_model_s"] = t_blocks, t_model
+        result["build_s"] = build_s
         A, P = sps.coo_matrix(A), sps.coo_matrix(P)
         np.savez(out_path + ".npz",
                  A_data=A.data, A_row=A.row, A_col=A.col,
@@ -340,11 +438,9 @@ def asl_worker(name: str, size_key: str, mode: str, out_path: str):
     singles, builds = [], []
     stages0 = None
     for it in range(ITERS):
-        model, t_blocks, t_model = build_model_timed()
-        builds.append(t_blocks + t_model)
         with tempfile.TemporaryDirectory() as td:
-            _, _, _, _, nlp, stages = asl_extract(model, Path(td),
-                                                  with_matrices=False)
+            _, _, _, _, nlp, stages, build_s = extract(Path(td), False, theta)
+            builds.append(build_s)
             singles.append(stages["single_s"])
             if it == 0:
                 stages0 = stages
@@ -359,7 +455,6 @@ def asl_worker(name: str, size_key: str, mode: str, out_path: str):
                         nlp.evaluate_grad_objective()
                         warm.append(time.perf_counter() - t0)
                     result["asl_resolve_reeval_s"] = median(warm)
-        del model
         result["asl_single_s"] = median(singles)
         result["asl_build_s"] = median(builds)
         result["stages"] = stages0
@@ -370,13 +465,9 @@ def asl_worker(name: str, size_key: str, mode: str, out_path: str):
         rewrites = []
         for _ in range(REWRITES):
             theta_new = spec.draw(rng)
-            bl = build_blocks(name, full, theta_new)
-            model = builder(bl)
             with tempfile.TemporaryDirectory() as td:
-                _, _, _, _, _, stages = asl_extract(model, Path(td),
-                                                    with_matrices=False)
+                _, _, _, _, _, stages, _ = extract(Path(td), False, theta_new)
             rewrites.append(stages["single_s"])
-            del model
         result["asl_resolve_rewrite_s"] = median(rewrites)
         flush()
 

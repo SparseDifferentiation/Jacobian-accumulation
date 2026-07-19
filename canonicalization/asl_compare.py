@@ -217,6 +217,33 @@ def asl_extract(model, td: Path, with_matrices: bool = True):
             {"symbolic_solver_labels": True} if with_matrices else {}))
     t_write = time.perf_counter() - t0
 
+    if is_kernel:
+        con_names, var_names = model._con_names, model._var_names
+    elif with_matrices:
+        import pyomo.environ as pyo
+        con_names = [con.name for con in
+                     model.component_data_objects(pyo.Constraint, active=True)]
+        var_names = [v.name for v in
+                     model.component_data_objects(pyo.Var, active=True)]
+    else:
+        con_names = var_names = None
+    P, c, A, b, nlp, stages = asl_read_extract(nl, td, con_names, var_names,
+                                               with_matrices)
+    stages["t_nl_write_s"] = t_write
+    stages["single_s"] = t_write + stages["single_aslread_s"]
+    return P, c, A, b, nlp, stages
+
+
+def asl_read_extract(nl: Path, td: Path, con_names, var_names,
+                     with_matrices: bool = True):
+    """AslNLP read + derivative evals + model-order scatter, shared by every
+    .nl producer (pyomo environ/kernel writers, the AMPL translator).
+
+    Returns (P, c, A, b, nlp, stages); stages carries t_asl_read_s, the four
+    eval timers, single_aslread_s (read + evals) and nl_bytes -- the caller
+    adds its own write/translate timers and the single_s total."""
+    from pyomo.contrib.pynumero.interfaces.ampl_nlp import AslNLP
+
     gc.collect()
     t0 = time.perf_counter()
     nlp = AslNLP(str(nl))
@@ -241,10 +268,9 @@ def asl_extract(model, td: Path, with_matrices: bool = True):
     grad0 = nlp.evaluate_grad_objective()
     t_grad = time.perf_counter() - t0
 
-    stages = {"t_nl_write_s": t_write, "t_asl_read_s": t_read,
+    stages = {"t_asl_read_s": t_read,
               "t_cons_s": t_cons, "t_jac_s": t_jac, "t_hess_s": t_hess,
               "t_grad_s": t_grad,
-              "single_s": t_write + t_read + t_cons + t_jac + t_hess + t_grad,
               "single_aslread_s": t_read + t_cons + t_jac + t_hess + t_grad,
               "nl_bytes": nl.stat().st_size}
     if not with_matrices:
@@ -252,17 +278,10 @@ def asl_extract(model, td: Path, with_matrices: bool = True):
 
     # undo the nl writer's (deterministic) row/col permutation; dropped
     # rows/columns (all-zero coefficients) scatter back as structural zeros
-    if is_kernel:
-        con_names, var_names = model._con_names, model._var_names
-    else:
-        import pyomo.environ as pyo
-        con_names = [con.name for con in
-                     model.component_data_objects(pyo.Constraint, active=True)]
-        var_names = [v.name for v in
-                     model.component_data_objects(pyo.Var, active=True)]
+    stem = nl.with_suffix("")
     J = sps.csr_matrix(J)
-    Sr = _scatter_from_names(td / "m.row", con_names, J.shape[0])
-    Sc = _scatter_from_names(td / "m.col", var_names, J.shape[1])
+    Sr = _scatter_from_names(Path(str(stem) + ".row"), con_names, J.shape[0])
+    Sc = _scatter_from_names(Path(str(stem) + ".col"), var_names, J.shape[1])
     J = Sr @ J @ Sc.T
     A = -J
     # affine constants live in the constraint bounds: g(0) = body(0) - lb

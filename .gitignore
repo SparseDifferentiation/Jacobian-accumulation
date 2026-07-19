@@ -13,6 +13,7 @@ canonicalization/results_*.json
 canonicalization/probes/_*.log
 canonicalization/suite_verify_*.json
 canonicalization/.ref_cache/
+.ampl_ce_license.txt
 
 # ADOL-C build artifacts
 jacobian/ADOL-C/
