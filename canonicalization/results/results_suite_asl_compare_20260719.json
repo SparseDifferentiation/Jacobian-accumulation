@@ -1,0 +1,393 @@
+{
+  "meta": {
+    "date": "2026-07-18/19",
+    "machine": "MacBook Pro (15-inch, 2018), 6-core Intel i7-8850H, 16 GB RAM, macOS 15.7",
+    "tool": "AMPL Solver Library via Pyomo 6.10.1 (environ layer, LinearExpression rows) + PyNumero AslNLP; libpynumero_ASL built from source",
+    "harness": "suite_compare.py --time --tool asl over _lowered_blocks.py",
+    "coverage": "19 of 21 problems; SimpleLP and SlowPruning excluded (environ modeling-layer memory ceiling -- the pyomo.kernel matrix_constraint layer rescues both, v2 rerun pending)",
+    "columns": "single_s = nl write + ASL read + constraints/Jacobian/Hessian/gradient evals; build_s = block assembly + Pyomo model objects (excluded, reported); resolve_reeval_s = in-memory re-evals (lower bound); resolve_rewrite_s = full nl rewrite path",
+    "verification": "suite_verify_asl_full.json gate; every timed problem bit-identical vs cvxpy CLARABEL data"
+  },
+  "results": [
+    {
+      "name": "SimpleScalarParametrizedLP",
+      "parametric": true,
+      "tool": "asl",
+      "single_s": 81.60879025695613,
+      "build_s": 37.403144548938144,
+      "resolve_reeval_s": 0.0332654369994998,
+      "resolve_rewrite_s": 81.38258024206152,
+      "stages": {
+        "t_nl_write_s": 62.08600075903814,
+        "t_asl_read_s": 20.3192795580253,
+        "t_cons_s": 0.24652741599129513,
+        "t_jac_s": 0.17871868301881477,
+        "t_hess_s": 0.014675734972115606,
+        "t_grad_s": 0.04605255799833685,
+        "single_s": 82.891254709044,
+        "single_aslread_s": 20.805253950005863,
+        "nl_bytes": 234836701
+      }
+    },
+    {
+      "name": "SimpleFullyParametrizedLP",
+      "parametric": true,
+      "tool": "asl",
+      "single_s": 39.003475013014395,
+      "build_s": 18.376520162972156,
+      "resolve_reeval_s": 0.016363447008188814,
+      "resolve_rewrite_s": 38.27544082101667,
+      "stages": {
+        "t_nl_write_s": 28.905024566978682,
+        "t_asl_read_s": 10.030375167960301,
+        "t_cons_s": 0.055213990970514715,
+        "t_jac_s": 0.08236961998045444,
+        "t_hess_s": 0.00542934297118336,
+        "t_grad_s": 0.019843134039547294,
+        "single_s": 39.09825582290068,
+        "single_aslread_s": 10.193231255922,
+        "nl_bytes": 115521712
+      }
+    },
+    {
+      "name": "LeastSquares",
+      "parametric": false,
+      "tool": "asl",
+      "single_s": 58.11702190595679,
+      "build_s": 14.497301356983371,
+      "resolve_reeval_s": null,
+      "resolve_rewrite_s": null,
+      "stages": {
+        "t_nl_write_s": 29.460811816039495,
+        "t_asl_read_s": 28.971184463007376,
+        "t_cons_s": 0.07176204799907282,
+        "t_jac_s": 0.3522168819908984,
+        "t_hess_s": 0.0017368690459989011,
+        "t_grad_s": 0.0002881050459109247,
+        "single_s": 58.85800018312875,
+        "single_aslread_s": 29.397188367089257,
+        "nl_bytes": 345410782
+      }
+    },
+    {
+      "name": "SimpleQP",
+      "parametric": false,
+      "tool": "asl",
+      "single_s": 77.10281643900089,
+      "build_s": 11.559031712997239,
+      "resolve_reeval_s": null,
+      "resolve_rewrite_s": null,
+      "stages": {
+        "t_nl_write_s": 30.24621864501387,
+        "t_asl_read_s": 46.17247138597304,
+        "t_cons_s": 0.07952078594826162,
+        "t_jac_s": 0.37521338899387047,
+        "t_hess_s": 0.2287742080516182,
+        "t_grad_s": 0.0006180250202305615,
+        "single_s": 77.10281643900089,
+        "single_aslread_s": 46.85659779398702,
+        "nl_bytes": 379982214
+      }
+    },
+    {
+      "name": "ParametrizedQP",
+      "parametric": true,
+      "tool": "asl",
+      "single_s": 59.89297002699459,
+      "build_s": 13.074498539965134,
+      "resolve_reeval_s": 0.0718261994770728,
+      "resolve_rewrite_s": 60.10067553707631,
+      "stages": {
+        "t_nl_write_s": 30.05303269100841,
+        "t_asl_read_s": 29.641308224003296,
+        "t_cons_s": 0.07442420197185129,
+        "t_jac_s": 0.4364031899604015,
+        "t_hess_s": 0.001528052962385118,
+        "t_grad_s": 0.000286261027213186,
+        "single_s": 60.20698262093356,
+        "single_aslread_s": 30.153949929925147,
+        "nl_bytes": 355345519
+      }
+    },
+    {
+      "name": "HuberRegression",
+      "parametric": false,
+      "tool": "asl",
+      "single_s": 57.46500720910262,
+      "build_s": 12.278582803963218,
+      "resolve_reeval_s": null,
+      "resolve_rewrite_s": null,
+      "stages": {
+        "t_nl_write_s": 28.352275254030246,
+        "t_asl_read_s": 28.56560224702116,
+        "t_cons_s": 0.06956451298901811,
+        "t_jac_s": 0.4760457150405273,
+        "t_hess_s": 0.0011546430177986622,
+        "t_grad_s": 0.0003648370038717985,
+        "single_s": 57.46500720910262,
+        "single_aslread_s": 29.112731955072377,
+        "nl_bytes": 346944304
+      }
+    },
+    {
+      "name": "SVMWithL1Regularization",
+      "parametric": true,
+      "tool": "asl",
+      "single_s": 52.29121772001963,
+      "build_s": 10.777900076995138,
+      "resolve_reeval_s": 0.0636842189996969,
+      "resolve_rewrite_s": 52.112294727994595,
+      "stages": {
+        "t_nl_write_s": 26.030946092039812,
+        "t_asl_read_s": 25.913142656034324,
+        "t_cons_s": 0.06591487099649385,
+        "t_jac_s": 0.28054313897155225,
+        "t_hess_s": 0.0003671220038086176,
+        "t_grad_s": 0.00030383997363969684,
+        "single_s": 52.29121772001963,
+        "single_aslread_s": 26.26027162797982,
+        "nl_bytes": 314796454
+      }
+    },
+    {
+      "name": "ConeMatrixStuffing",
+      "parametric": false,
+      "tool": "asl",
+      "single_s": 0.11404398892773315,
+      "build_s": 1.2451151940622367,
+      "resolve_reeval_s": null,
+      "resolve_rewrite_s": null,
+      "stages": {
+        "t_nl_write_s": 0.07611841504694894,
+        "t_asl_read_s": 0.05132408899953589,
+        "t_cons_s": 0.00022666098084300756,
+        "t_jac_s": 0.00041247898479923606,
+        "t_hess_s": 0.00020113104255869985,
+        "t_grad_s": 0.0001306989579461515,
+        "single_s": 0.12841347401263192,
+        "single_aslread_s": 0.05229505896568298,
+        "nl_bytes": 468739
+      }
+    },
+    {
+      "name": "SmallMatrixStuffing",
+      "parametric": false,
+      "tool": "asl",
+      "single_s": 0.0974863659357652,
+      "build_s": 0.8204782310058363,
+      "resolve_reeval_s": null,
+      "resolve_rewrite_s": null,
+      "stages": {
+        "t_nl_write_s": 0.07019281800603494,
+        "t_asl_read_s": 0.043855772993993014,
+        "t_cons_s": 0.00018217996694147587,
+        "t_jac_s": 0.00031834596302360296,
+        "t_hess_s": 0.00019936100579798222,
+        "t_grad_s": 9.108497761189938e-05,
+        "single_s": 0.11483956291340292,
+        "single_aslread_s": 0.044646744907367975,
+        "nl_bytes": 373893
+      }
+    },
+    {
+      "name": "ParamConeMatrixStuffing",
+      "parametric": true,
+      "tool": "asl",
+      "single_s": 0.007929501996841282,
+      "build_s": 0.017987336963415146,
+      "resolve_reeval_s": 0.00023132149362936616,
+      "resolve_rewrite_s": 0.007311522902455181,
+      "stages": {
+        "t_nl_write_s": 0.004575505969114602,
+        "t_asl_read_s": 0.01653511100448668,
+        "t_cons_s": 0.0001260249991901219,
+        "t_jac_s": 0.00019168801372870803,
+        "t_hess_s": 0.00018344999989494681,
+        "t_grad_s": 4.2049039620906115e-05,
+        "single_s": 0.021653829026035964,
+        "single_aslread_s": 0.017078323056921363,
+        "nl_bytes": 17982
+      }
+    },
+    {
+      "name": "ParamSmallMatrixStuffing",
+      "parametric": true,
+      "tool": "asl",
+      "single_s": 0.010059223975986242,
+      "build_s": 0.017777362023480237,
+      "resolve_reeval_s": 0.00024443049915134907,
+      "resolve_rewrite_s": 0.009470733988564461,
+      "stages": {
+        "t_nl_write_s": 0.0060742630157619715,
+        "t_asl_read_s": 0.016743134008720517,
+        "t_cons_s": 0.00011105701560154557,
+        "t_jac_s": 0.0001862390199676156,
+        "t_hess_s": 0.00017276301514357328,
+        "t_grad_s": 4.0398037526756525e-05,
+        "single_s": 0.02332785411272198,
+        "single_aslread_s": 0.017253591096960008,
+        "nl_bytes": 26956
+      }
+    },
+    {
+      "name": "Yitzhaki",
+      "parametric": false,
+      "tool": "asl",
+      "single_s": 20.3997370620491,
+      "build_s": 6.944289546983782,
+      "resolve_reeval_s": null,
+      "resolve_rewrite_s": null,
+      "stages": {
+        "t_nl_write_s": 10.068050091038458,
+        "t_asl_read_s": 10.11538540897891,
+        "t_cons_s": 0.024854546005371958,
+        "t_jac_s": 0.09748516802210361,
+        "t_hess_s": 0.0004566269926726818,
+        "t_grad_s": 0.0005087869940325618,
+        "single_s": 20.306740628031548,
+        "single_aslread_s": 10.23869053699309,
+        "nl_bytes": 123374514
+      }
+    },
+    {
+      "name": "Murray",
+      "parametric": false,
+      "tool": "asl",
+      "single_s": 10.955114184005652,
+      "build_s": 5.663700267963577,
+      "resolve_reeval_s": null,
+      "resolve_rewrite_s": null,
+      "stages": {
+        "t_nl_write_s": 7.304054337029811,
+        "t_asl_read_s": 3.5889081910136156,
+        "t_cons_s": 0.017360185971483588,
+        "t_jac_s": 0.04048958298517391,
+        "t_hess_s": 0.0015130710089579225,
+        "t_grad_s": 0.002788815996609628,
+        "single_s": 10.955114184005652,
+        "single_aslread_s": 3.6510598469758406,
+        "nl_bytes": 39536275
+      }
+    },
+    {
+      "name": "Cajas",
+      "parametric": false,
+      "tool": "asl",
+      "single_s": 11.791866303072311,
+      "build_s": 7.196074823033996,
+      "resolve_reeval_s": null,
+      "resolve_rewrite_s": null,
+      "stages": {
+        "t_nl_write_s": 7.301042127015535,
+        "t_asl_read_s": 4.39310684899101,
+        "t_cons_s": 0.022609634033869952,
+        "t_jac_s": 0.06423573801293969,
+        "t_hess_s": 0.00025318795815110207,
+        "t_grad_s": 5.0871982239186764e-05,
+        "single_s": 11.781298407993745,
+        "single_aslread_s": 4.48025628097821,
+        "nl_bytes": 46424584
+      }
+    },
+    {
+      "name": "OptimalAdvertising",
+      "parametric": false,
+      "tool": "asl",
+      "single_s": 6.957065354974475,
+      "build_s": 3.0771276249433868,
+      "resolve_reeval_s": null,
+      "resolve_rewrite_s": null,
+      "stages": {
+        "t_nl_write_s": 4.79380983900046,
+        "t_asl_read_s": 2.121386448969133,
+        "t_cons_s": 0.011195558996405452,
+        "t_jac_s": 0.027889573015272617,
+        "t_hess_s": 0.0002168590435758233,
+        "t_grad_s": 0.001943630981259048,
+        "single_s": 6.956441910006106,
+        "single_aslread_s": 2.162632071005646,
+        "nl_bytes": 23563251
+      }
+    },
+    {
+      "name": "FactorCovarianceModel",
+      "parametric": true,
+      "tool": "asl",
+      "single_s": 29.425314912979957,
+      "build_s": 56.406578601978254,
+      "resolve_reeval_s": 0.03334400098538026,
+      "resolve_rewrite_s": 30.022375630040187,
+      "stages": {
+        "t_nl_write_s": 15.046620363020338,
+        "t_asl_read_s": 14.008084647008218,
+        "t_cons_s": 0.03520300699165091,
+        "t_jac_s": 0.17936568800359964,
+        "t_hess_s": 0.009363581950310618,
+        "t_grad_s": 0.00201225996715948,
+        "single_s": 29.280649546941277,
+        "single_aslread_s": 14.234029183920939,
+        "nl_bytes": 168757550
+      }
+    },
+    {
+      "name": "ConvexPlasticity",
+      "parametric": true,
+      "tool": "asl",
+      "single_s": 1.1017737769288942,
+      "build_s": 13.094286278937943,
+      "resolve_reeval_s": 0.0005722450150642544,
+      "resolve_rewrite_s": 1.0933944890857674,
+      "stages": {
+        "t_nl_write_s": 0.7381304859882221,
+        "t_asl_read_s": 0.37768259696895257,
+        "t_cons_s": 0.0025734950322657824,
+        "t_jac_s": 0.002353460993617773,
+        "t_hess_s": 0.006968847999814898,
+        "t_grad_s": 0.0021606700029224157,
+        "single_s": 1.1298695569857955,
+        "single_aslread_s": 0.39173907099757344,
+        "nl_bytes": 3766817
+      }
+    },
+    {
+      "name": "TvInpainting",
+      "parametric": false,
+      "tool": "asl",
+      "single_s": 45.06660501798615,
+      "build_s": 25.95113114808919,
+      "resolve_reeval_s": null,
+      "resolve_rewrite_s": null,
+      "stages": {
+        "t_nl_write_s": 32.21033741696738,
+        "t_asl_read_s": 11.985246178985108,
+        "t_cons_s": 0.08097824297146872,
+        "t_jac_s": 0.13092249998589978,
+        "t_hess_s": 0.0016232640482485294,
+        "t_grad_s": 0.005912680004257709,
+        "single_s": 44.41502028296236,
+        "single_aslread_s": 12.204682865994982,
+        "nl_bytes": 126345446
+      }
+    },
+    {
+      "name": "SemidefiniteProgramming",
+      "parametric": false,
+      "tool": "asl",
+      "single_s": 10.568471228063572,
+      "build_s": 2.3295809060218744,
+      "resolve_reeval_s": null,
+      "resolve_rewrite_s": null,
+      "stages": {
+        "t_nl_write_s": 5.318205882969778,
+        "t_asl_read_s": 5.172002476057969,
+        "t_cons_s": 0.013002186024095863,
+        "t_jac_s": 0.0645719530293718,
+        "t_hess_s": 0.00036092399386689067,
+        "t_grad_s": 0.0003278059884905815,
+        "single_s": 10.568471228063572,
+        "single_aslread_s": 5.250265345093794,
+        "nl_bytes": 61832926
+      }
+    }
+  ]
+}
