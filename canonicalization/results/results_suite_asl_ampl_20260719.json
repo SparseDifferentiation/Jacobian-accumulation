@@ -1,0 +1,413 @@
+{
+  "meta": {
+    "date": "2026-07-19/20",
+    "machine": "MacBook Pro (15-inch, 2018), 6-core Intel i7-8850H, 16 GB RAM, macOS 15.7",
+    "tool": "AMPL-native ASL pipeline: amplpy 20260520 (AMPL for Academics CE), models in the AMPL engine, C translator writing BINARY .nl (presolve 0), PyNumero AslNLP extraction",
+    "harness": "suite_compare.py --time --tool asl with ASL_MODEL_LAYER=ampl",
+    "coverage": "19 of 21. SlowPruning: worker OOM on 16 GB (fourth modeling layer to hit the 8.4M-nnz kron memory wall; CasADi/engine handle it via compact expression graphs). OptimalAdvertising: AMPL's translator REJECTS the instance ('can't multiply z[278] by NaN') -- the upstream generator's non-finite coefficient; AMPL is the only compared system that refuses rather than propagates NaN.",
+    "columns": "single_s = t_translate (genmod + binary write) + ASL read + cons/jac/hess/grad evals; build_s = block assembly + amplpy data transfer (excluded; note: blends harness pandas prep with AMPL ingestion -- split lands with the readable-model rework); resolve_reeval_s / resolve_rewrite_s as before",
+    "note": "name files %g-shorten round indices (z[100000] -> z[1e+05]); verification canonicalizes numeric bracket indices (asl_compare._canon_name)",
+    "verification": "suite_verify_asl_full.json gate; every timed problem bit-identical vs cvxpy CLARABEL data"
+  },
+  "results": [
+    {
+      "name": "SimpleLP",
+      "parametric": false,
+      "tool": "asl",
+      "single_s": 120.63029420294333,
+      "build_s": 235.63614214101108,
+      "resolve_reeval_s": null,
+      "resolve_rewrite_s": null,
+      "stages": {
+        "t_asl_read_s": 49.09019383805571,
+        "t_cons_s": 7.518989706994034,
+        "t_jac_s": 1.6068392909946851,
+        "t_hess_s": 0.4042499920469709,
+        "t_grad_s": 0.19374627800425515,
+        "single_aslread_s": 58.81401910609566,
+        "nl_bytes": 930000516,
+        "t_data_s": 225.52835446997778,
+        "t_translate_s": 58.74680155602982,
+        "single_s": 117.56082066212548
+      }
+    },
+    {
+      "name": "SimpleScalarParametrizedLP",
+      "parametric": true,
+      "tool": "asl",
+      "single_s": 21.05725590401562,
+      "build_s": 43.498576920013875,
+      "resolve_reeval_s": 0.033298230526270345,
+      "resolve_rewrite_s": 21.417112370952964,
+      "stages": {
+        "t_asl_read_s": 8.942258967959788,
+        "t_cons_s": 0.11028821300715208,
+        "t_jac_s": 0.16388879099395126,
+        "t_hess_s": 0.01064332399982959,
+        "t_grad_s": 0.03964518796419725,
+        "single_aslread_s": 9.266724483924918,
+        "nl_bytes": 186000513,
+        "t_data_s": 42.550689642026555,
+        "t_translate_s": 11.137377168983221,
+        "single_s": 20.40410165290814
+      }
+    },
+    {
+      "name": "SimpleFullyParametrizedLP",
+      "parametric": true,
+      "tool": "asl",
+      "single_s": 9.082077589991968,
+      "build_s": 20.909948187007103,
+      "resolve_reeval_s": 0.0163198699883651,
+      "resolve_rewrite_s": 9.289535382995382,
+      "stages": {
+        "t_asl_read_s": 4.477613428025506,
+        "t_cons_s": 0.0567118389881216,
+        "t_jac_s": 0.086199126963038,
+        "t_hess_s": 0.00543846603250131,
+        "t_grad_s": 0.019721956050489098,
+        "single_aslread_s": 4.645684816059656,
+        "nl_bytes": 93000525,
+        "t_data_s": 20.873901579005178,
+        "t_translate_s": 4.481212250015233,
+        "single_s": 9.12689706607489
+      }
+    },
+    {
+      "name": "LeastSquares",
+      "parametric": false,
+      "tool": "asl",
+      "single_s": 18.89174313499825,
+      "build_s": 66.60062354197726,
+      "resolve_reeval_s": null,
+      "resolve_rewrite_s": null,
+      "stages": {
+        "t_asl_read_s": 8.319775761978235,
+        "t_cons_s": 0.07162222499027848,
+        "t_jac_s": 0.34711074602091685,
+        "t_hess_s": 0.001769207010511309,
+        "t_grad_s": 0.00028434296837076545,
+        "single_aslread_s": 8.740562282968313,
+        "nl_bytes": 168500529,
+        "t_data_s": 56.85683937201975,
+        "t_translate_s": 8.707060849003028,
+        "single_s": 17.44762313197134
+      }
+    },
+    {
+      "name": "SimpleQP",
+      "parametric": false,
+      "tool": "asl",
+      "single_s": 35.60950058297021,
+      "build_s": 67.69588960998226,
+      "resolve_reeval_s": null,
+      "resolve_rewrite_s": null,
+      "stages": {
+        "t_asl_read_s": 16.529707920970395,
+        "t_cons_s": 0.07077091897372156,
+        "t_jac_s": 0.31105093500809744,
+        "t_hess_s": 1.399286781961564,
+        "t_grad_s": 0.19910719495965168,
+        "single_aslread_s": 18.50992375187343,
+        "nl_bytes": 228460247,
+        "t_data_s": 61.12202815100318,
+        "t_translate_s": 16.20298245298909,
+        "single_s": 34.71290620486252
+      }
+    },
+    {
+      "name": "ParametrizedQP",
+      "parametric": true,
+      "tool": "asl",
+      "single_s": 18.629101411090232,
+      "build_s": 67.43624658096815,
+      "resolve_reeval_s": 0.07397463597590104,
+      "resolve_rewrite_s": 18.555130534106866,
+      "stages": {
+        "t_asl_read_s": 8.75880100496579,
+        "t_cons_s": 0.07629213499603793,
+        "t_jac_s": 0.4562791680218652,
+        "t_hess_s": 0.0015545940259471536,
+        "t_grad_s": 0.00024762004613876343,
+        "single_aslread_s": 9.293174522055779,
+        "nl_bytes": 173414930,
+        "t_data_s": 63.30004545196425,
+        "t_translate_s": 9.335926889034454,
+        "single_s": 18.629101411090232
+      }
+    },
+    {
+      "name": "HuberRegression",
+      "parametric": false,
+      "tool": "asl",
+      "single_s": 17.54283010197105,
+      "build_s": 62.72051129298052,
+      "resolve_reeval_s": null,
+      "resolve_rewrite_s": null,
+      "stages": {
+        "t_asl_read_s": 8.09268548199907,
+        "t_cons_s": 0.08034594199853018,
+        "t_jac_s": 0.39822701702360064,
+        "t_hess_s": 0.001099693006835878,
+        "t_grad_s": 0.0003400249988771975,
+        "single_aslread_s": 8.572698159026913,
+        "nl_bytes": 162933531,
+        "t_data_s": 58.77707447501598,
+        "t_translate_s": 8.54796247399645,
+        "single_s": 17.120660633023363
+      }
+    },
+    {
+      "name": "SVMWithL1Regularization",
+      "parametric": true,
+      "tool": "asl",
+      "single_s": 50.01348867599154,
+      "build_s": 157.09267769899452,
+      "resolve_reeval_s": 0.15880644548451528,
+      "resolve_rewrite_s": 34.75004779611481,
+      "stages": {
+        "t_asl_read_s": 23.98412370402366,
+        "t_cons_s": 0.2063040260109119,
+        "t_jac_s": 0.8484196990029886,
+        "t_hess_s": 0.001136988983489573,
+        "t_grad_s": 0.0009464629692956805,
+        "single_aslread_s": 25.040930880990345,
+        "nl_bytes": 152686580,
+        "t_data_s": 152.39708479697583,
+        "t_translate_s": 25.75015642598737,
+        "single_s": 50.791087306977715
+      }
+    },
+    {
+      "name": "ConeMatrixStuffing",
+      "parametric": false,
+      "tool": "asl",
+      "single_s": 0.03079035592963919,
+      "build_s": 4.130107639008202,
+      "resolve_reeval_s": null,
+      "resolve_rewrite_s": null,
+      "stages": {
+        "t_asl_read_s": 0.09575990098528564,
+        "t_cons_s": 0.0006030529621057212,
+        "t_jac_s": 0.001217773009557277,
+        "t_hess_s": 0.0006249399739317596,
+        "t_grad_s": 0.0004144089762121439,
+        "single_aslread_s": 0.09862007590709254,
+        "nl_bytes": 275516,
+        "t_data_s": 0.27292686502914876,
+        "t_translate_s": 0.043722747010178864,
+        "single_s": 0.1423428229172714
+      }
+    },
+    {
+      "name": "SmallMatrixStuffing",
+      "parametric": false,
+      "tool": "asl",
+      "single_s": 0.038629857008345425,
+      "build_s": 0.8380815039854497,
+      "resolve_reeval_s": null,
+      "resolve_rewrite_s": null,
+      "stages": {
+        "t_asl_read_s": 0.02662648999830708,
+        "t_cons_s": 0.0001953250030055642,
+        "t_jac_s": 0.00036424800055101514,
+        "t_hess_s": 0.00021677999757230282,
+        "t_grad_s": 0.00012187199899926782,
+        "single_aslread_s": 0.02752471499843523,
+        "nl_bytes": 220516,
+        "t_data_s": 0.07511494698701426,
+        "t_translate_s": 0.011105142009910196,
+        "single_s": 0.038629857008345425
+      }
+    },
+    {
+      "name": "ParamConeMatrixStuffing",
+      "parametric": true,
+      "tool": "asl",
+      "single_s": 0.011937092058360577,
+      "build_s": 0.03875835897633806,
+      "resolve_reeval_s": 0.0006219764763955027,
+      "resolve_rewrite_s": 0.011733618041034788,
+      "stages": {
+        "t_asl_read_s": 0.053826188028324395,
+        "t_cons_s": 0.0002716569579206407,
+        "t_jac_s": 0.0005214859847910702,
+        "t_hess_s": 0.0005136990221217275,
+        "t_grad_s": 0.00010127300629392266,
+        "single_aslread_s": 0.055234302999451756,
+        "nl_bytes": 11511,
+        "t_data_s": 0.03930489002959803,
+        "t_translate_s": 0.004956482967827469,
+        "single_s": 0.060190785967279226
+      }
+    },
+    {
+      "name": "ParamSmallMatrixStuffing",
+      "parametric": true,
+      "tool": "asl",
+      "single_s": 0.013211437966674566,
+      "build_s": 0.0425754229654558,
+      "resolve_reeval_s": 0.0006400764686986804,
+      "resolve_rewrite_s": 0.012994851917028427,
+      "stages": {
+        "t_asl_read_s": 0.05381914600729942,
+        "t_cons_s": 0.0002686249790713191,
+        "t_jac_s": 0.0005402660463005304,
+        "t_hess_s": 0.0005411729798652232,
+        "t_grad_s": 0.00012391700875014067,
+        "single_aslread_s": 0.05529312702128664,
+        "nl_bytes": 17011,
+        "t_data_s": 0.04951283003902063,
+        "t_translate_s": 0.005597342038527131,
+        "single_s": 0.06089046905981377
+      }
+    },
+    {
+      "name": "Yitzhaki",
+      "parametric": false,
+      "tool": "asl",
+      "single_s": 18.32540929102106,
+      "build_s": 52.01915959501639,
+      "resolve_reeval_s": null,
+      "resolve_rewrite_s": null,
+      "stages": {
+        "t_asl_read_s": 7.443636133975815,
+        "t_cons_s": 0.07427834096597508,
+        "t_jac_s": 0.29660970700206235,
+        "t_hess_s": 0.001342009985819459,
+        "t_grad_s": 0.0016051959828473628,
+        "single_aslread_s": 7.817471387912519,
+        "nl_bytes": 57994345,
+        "t_data_s": 48.87444744003005,
+        "t_translate_s": 3.4810465810005553,
+        "single_s": 11.298517968913075
+      }
+    },
+    {
+      "name": "Murray",
+      "parametric": false,
+      "tool": "asl",
+      "single_s": 11.700703073933255,
+      "build_s": 25.32796294405125,
+      "resolve_reeval_s": null,
+      "resolve_rewrite_s": null,
+      "stages": {
+        "t_asl_read_s": 5.5388170390506275,
+        "t_cons_s": 0.04687769402517006,
+        "t_jac_s": 0.13825774501310661,
+        "t_hess_s": 0.004477792012039572,
+        "t_grad_s": 0.00844289205269888,
+        "single_aslread_s": 5.736873162153643,
+        "nl_bytes": 34949050,
+        "t_data_s": 25.097543216019403,
+        "t_translate_s": 5.966117553994991,
+        "single_s": 11.702990716148634
+      }
+    },
+    {
+      "name": "Cajas",
+      "parametric": false,
+      "tool": "asl",
+      "single_s": 13.788610962976236,
+      "build_s": 34.52147745696129,
+      "resolve_reeval_s": null,
+      "resolve_rewrite_s": null,
+      "stages": {
+        "t_asl_read_s": 6.9923542339820415,
+        "t_cons_s": 0.06126880401279777,
+        "t_jac_s": 0.19013756298227236,
+        "t_hess_s": 0.0006905620102770627,
+        "t_grad_s": 0.000165864999871701,
+        "single_aslread_s": 7.24461702798726,
+        "nl_bytes": 40224896,
+        "t_data_s": 32.15527586999815,
+        "t_translate_s": 6.5439939349889755,
+        "single_s": 13.788610962976236
+      }
+    },
+    {
+      "name": "FactorCovarianceModel",
+      "parametric": true,
+      "tool": "asl",
+      "single_s": 26.096563510945998,
+      "build_s": 251.8432964149397,
+      "resolve_reeval_s": 0.08344137700623833,
+      "resolve_rewrite_s": 8.8552897159243,
+      "stages": {
+        "t_asl_read_s": 13.27231066301465,
+        "t_cons_s": 0.10478795599192381,
+        "t_jac_s": 0.5262998009566218,
+        "t_hess_s": 0.07873239496257156,
+        "t_grad_s": 0.014019328984431922,
+        "single_aslread_s": 13.9961501439102,
+        "nl_bytes": 82876835,
+        "t_data_s": 86.62730671296595,
+        "t_translate_s": 11.630557196971495,
+        "single_s": 25.626707340881694
+      }
+    },
+    {
+      "name": "ConvexPlasticity",
+      "parametric": true,
+      "tool": "asl",
+      "single_s": 0.4076803930220194,
+      "build_s": 13.82539327495033,
+      "resolve_reeval_s": 0.0006145034858491272,
+      "resolve_rewrite_s": 0.3976243079523556,
+      "stages": {
+        "t_asl_read_s": 0.22050994000164792,
+        "t_cons_s": 0.0014105309965088964,
+        "t_jac_s": 0.002327266032807529,
+        "t_hess_s": 0.010374168981797993,
+        "t_grad_s": 0.0025572689482942224,
+        "single_aslread_s": 0.23717917496105656,
+        "nl_bytes": 3102531,
+        "t_data_s": 0.7179847600054927,
+        "t_translate_s": 0.1963103409507312,
+        "single_s": 0.43348951591178775
+      }
+    },
+    {
+      "name": "TvInpainting",
+      "parametric": false,
+      "tool": "asl",
+      "single_s": 14.925907046999782,
+      "build_s": 24.095978222962003,
+      "resolve_reeval_s": null,
+      "resolve_rewrite_s": null,
+      "stages": {
+        "t_asl_read_s": 6.415474244975485,
+        "t_cons_s": 0.08029500202974305,
+        "t_jac_s": 0.12948941200738773,
+        "t_hess_s": 0.001617165980860591,
+        "t_grad_s": 0.0059175590286031365,
+        "single_aslread_s": 6.632793384022079,
+        "nl_bytes": 114938180,
+        "t_data_s": 23.63120051898295,
+        "t_translate_s": 8.213197454984765,
+        "single_s": 14.845990839006845
+      }
+    },
+    {
+      "name": "SemidefiniteProgramming",
+      "parametric": false,
+      "tool": "asl",
+      "single_s": 3.1331868150737137,
+      "build_s": 10.984824780956842,
+      "resolve_reeval_s": null,
+      "resolve_rewrite_s": null,
+      "stages": {
+        "t_asl_read_s": 1.4830591980135068,
+        "t_cons_s": 0.01561653398675844,
+        "t_jac_s": 0.09809908800525591,
+        "t_hess_s": 0.0003838279517367482,
+        "t_grad_s": 0.0003604469820857048,
+        "single_aslread_s": 1.5975190949393436,
+        "nl_bytes": 30053141,
+        "t_data_s": 10.460850664007012,
+        "t_translate_s": 1.5324937580153346,
+        "single_s": 3.1300128529546782
+      }
+    }
+  ]
+}

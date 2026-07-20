@@ -253,6 +253,57 @@ paradigm wins (structured-sparse ConvexPlasticity, tiny problems); the
 dense-data problems are where discovery collapses. Raw files:
 `results/results_suite_{jump,asl}_compare_2026071[89].json`.
 
+### The AMPL-native pipeline (binary .nl via the real translator)
+
+With an AMPL CE/academic license (`amplpy`; key gitignored in
+`.ampl_ce_license.txt`), `ASL_MODEL_LAYER=ampl` replaces Pyomo's Python-ASCII
+writer with the genuine article: models built in the AMPL engine, the C
+translator writing **binary** .nl (`option presolve 0` keeps the instance
+verbatim), then the identical AslNLP extraction. All 19 covered problems
+verify `max|diff|=0`; the timed region is pure AMPL/ASL C code (translate +
+binary parse + evals — verification and aux name files are excluded; timed
+writes carry no labels). Selected numbers, seconds:
+
+| Problem | Pyomo-ASCII pipeline | AMPL-binary pipeline | of which translate / read | derivative evals |
+|---|---|---|---|---|
+| SimpleLP (10⁷) | — (modeling layer OOM) | 120.6 | 58.7 / 49.1 | 9.7 |
+| SimpleQP | 77.1 | 35.6 | 16.2 / 16.5 | 1.98 |
+| ParametrizedQP | 59.9 | 18.6 | 9.3 / 8.8 | 0.53 |
+| HuberRegression | 57.5 | 17.5 | 8.5 / 8.1 | 0.48 |
+| TvInpainting | 45.1 | 14.9 | 8.2 / 6.4 | 0.22 |
+| FactorCovarianceModel | 29.4 | 26.1 | 11.6 / 13.3 | 0.72 |
+| Yitzhaki | 20.4 | 18.3 | 3.5 / 7.4 | 0.37 |
+| SDP | 10.6 | 3.1 | 1.5 / 1.5 | 0.11 |
+
+Conclusions the two ASL pipelines support jointly:
+
+1. **Serialization is 95–99 % of ASL's cost in every regime**; the derivative
+   system itself is milliseconds everywhere (≤ 2 s even at 2·10⁷ rows,
+   linear). The .nl architecture — serialize, parse, build tapes — has a
+   data-volume floor no format cleverness removes: C+binary buys ~2–3× over
+   Python+ASCII on dense-block problems and roughly nothing on many-row
+   models (genmod's per-row instantiation dominates there).
+2. **The file interface is also why AMPL scales**: it is the only modeling
+   layer here that survives SimpleLP at n=10⁷ on 16 GB (it streams; the
+   others materialize object graphs). Decoupling and scale are what the 1990
+   design bought; per-instance latency is the price, invisible when one
+   instance is solved once, decisive when canonicalization repeats.
+3. **AMPL is the only compared system that rejects the NaN-poisoned
+   OptimalAdvertising instance** ("can't multiply z[278] by NaN") where
+   CVXPY/CasADi/JuMP/ASL-via-Pyomo propagate it — arguably the soundest
+   policy; documented alongside the upstream non-finite-data reports.
+   SlowPruning's 8.4M-nnz kron block OOMs a fourth modeling layer (the AMPL
+   engine) on this machine; only the expression-graph systems (CasADi,
+   engine) represent it compactly.
+4. Interop footnote: AMPL's `.row`/`.col` name files %g-shorten round indices
+   (`z[100000]` → `z[1e+05]`); verification canonicalizes numeric bracket
+   indices (`asl_compare._canon_name`).
+
+Raw file: `results/results_suite_asl_ampl_20260719.json`. Readable
+per-problem `.mod`/`.dat` artifacts (models formulated algebraically, data
+read timed as AMPL work) are the planned v2 of this pipeline; see
+`ampl_models/SimpleQP.mod` for the exemplar format.
+
 ## Files
 
 - `casadi_compare.py` — harness: Spec contract, extraction, verification, timing.

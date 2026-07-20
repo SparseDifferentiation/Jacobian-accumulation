@@ -177,6 +177,23 @@ MODEL_BUILDERS = {
 # --------------------------------------------------------------------------- #
 # ASL extraction
 # --------------------------------------------------------------------------- #
+def _canon_name(nm: str) -> str:
+    """Canonicalize numeric bracket indices: AMPL's aux files format set
+    members with %g-style shortening, so g0[100000] appears as g0[1e+05].
+    Rewrite every numeric index part to its plain-integer form."""
+    lb = nm.find("[")
+    if lb < 0 or not nm.endswith("]"):
+        return nm
+    parts = []
+    for p in nm[lb + 1:-1].split(","):
+        try:
+            f = float(p)
+            parts.append(str(int(f)) if f == int(f) else p.strip())
+        except ValueError:
+            parts.append(p.strip())
+    return nm[:lb] + "[" + ",".join(parts) + "]"
+
+
 def _scatter_from_names(path: Path, model_names: list,
                         n_nl: int | None = None) -> sps.csr_matrix:
     """S with S[i, j] = 1 iff nl position j holds the i-th model row/column.
@@ -189,7 +206,8 @@ def _scatter_from_names(path: Path, model_names: list,
     nl_names = [ln.strip() for ln in path.read_text().splitlines() if ln.strip()]
     if n_nl is not None:
         nl_names = nl_names[:n_nl]   # .row appends objective names after rows
-    pos = {nm: j for j, nm in enumerate(nl_names)}
+    pos = {_canon_name(nm): j for j, nm in enumerate(nl_names)}
+    model_names = [_canon_name(nm) for nm in model_names]
     ij = [(i, pos[nm]) for i, nm in enumerate(model_names) if nm in pos]
     rows = np.array([i for i, _ in ij], dtype=np.int64)
     cols = np.array([j for _, j in ij], dtype=np.int64)
