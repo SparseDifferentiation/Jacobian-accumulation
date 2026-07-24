@@ -1,0 +1,49 @@
+Hierarchical-sparsity trace probe (probe_hierarchical_trace.py --full), 2026-07-19.
+Machine: MacBook Pro (15-inch, 2018), 6-core Intel i7-8850H, 16 GB RAM, macOS 15.7.
+Python 3.14, casadi 3.7.2 (PyPI), numpy 2.4.6, BLAS pinned to 1 thread.
+Purpose: fact-check the suite's slow CasADi numbers against the CasADi paper's
+hierarchical sparsity algorithm (Andersson et al. 2019, Sect. 5) on the exact
+ParametrizedQP rows. Section (b) scales ran solo; light file I/O coexisted
+with section (c) (mechanism-scale conclusions unaffected).
+
+(a) paper Example-1 control: 100000x100000 tridiagonal, constant
+    pattern     0.13s  colors fwd/adj 3/3  jac(sym)     0.19s   [paper: 7 sweeps, 3 colors]
+
+(b) ParametrizedQP-shaped rows, stage-by-stage
+  MX param A  750x300: J is 1350x1050, nnz 226350
+    detection     0.03s  (<= 17 bitvector sweeps even without hierarchy)
+    coloring      0.13s   colors fwd/adj 301/752  -> accumulation = 301 whole-graph AD sweeps
+    jac(sym)      1.61s  fn ctor     0.00s  eval     0.04s   total     1.68s
+  MX param A  1500x600: J is 2700x2100, nnz 902700
+    detection     0.19s  (<= 33 bitvector sweeps even without hierarchy)
+    coloring      1.30s   colors fwd/adj 601/1502  -> accumulation = 601 whole-graph AD sweeps
+    jac(sym)     12.28s  fn ctor     0.00s  eval     0.15s   total    12.62s
+  MX param A  3000x1200: J is 5400x4200, nnz 3605400
+    detection     2.51s  (<= 66 bitvector sweeps even without hierarchy)
+    coloring      9.82s   colors fwd/adj 1201/3002  -> accumulation = 1201 whole-graph AD sweeps
+    jac(sym)     98.56s  fn ctor     0.01s  eval     0.82s   total   101.90s
+
+  constant A  750x300: J is 1350x1050, nnz 226350
+    detection     0.04s  (<= 17 bitvector sweeps even without hierarchy)
+    coloring      0.14s   colors fwd/adj 301/752  -> accumulation = 301 whole-graph AD sweeps
+    jac(sym)      1.58s  fn ctor     0.00s  eval     0.01s   total     1.64s
+  constant A  1500x600: J is 2700x2100, nnz 902700
+    detection     0.17s  (<= 33 bitvector sweeps even without hierarchy)
+    coloring      1.12s   colors fwd/adj 601/1502  -> accumulation = 601 whole-graph AD sweeps
+    jac(sym)     12.43s  fn ctor     0.00s  eval     0.03s   total    12.64s
+  constant A  3000x1200: J is 5400x4200, nnz 3605400
+    detection     2.54s  (<= 66 bitvector sweeps even without hierarchy)
+    coloring     10.01s   colors fwd/adj 1201/3002  -> accumulation = 1201 whole-graph AD sweeps
+    jac(sym)     98.78s  fn ctor     0.01s  eval     0.19s   total   101.52s
+
+  detection+coloring only at suite size (6000x2400):
+    detection     8.17s  colors fwd/adj 2401/6002  nnz 14410800
+
+(c) real ParametrizedQP (6000x2400), harness extraction stages
+    gradient(f)          0.00s
+    jacobian->P          0.03s   (identity block: cheap)
+    jacobian->A        892.02s   (dense 6000x2400 param block)
+    substitutes          0.01s
+    Function ctor        0.05s
+    eval (1 theta)       5.74s
+    TOTAL              897.86s   (suite casadi_single_s was ~771.5 s = ctor-onward, x1 draw, med 3)

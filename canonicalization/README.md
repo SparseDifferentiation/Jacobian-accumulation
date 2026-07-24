@@ -304,6 +304,75 @@ per-problem `.mod`/`.dat` artifacts (models formulated algebraically, data
 read timed as AMPL work) are the planned v2 of this pipeline; see
 `ampl_models/SimpleQP.mod` for the exemplar format.
 
+### Declared-structure systems, finalized: JuMP vs AMPL with the .nl split
+
+The thesis table for the two declared-structure systems, full suite. The AMPL
+pipeline is decomposed into its three stages so the .nl serialization cost and
+the derivative work are separate columns: **write** = the C translator
+emitting binary .nl (genmod + write), **read** = ASL's binary parse + tape
+build, **derivative evals** = constraint eval + Jacobian + Hessian-of-Lagrangian
++ gradient. JuMP's `copy_to` has no such split — it is a single in-memory
+assembly step. Seconds; same runs as above
+(`results/results_suite_jump_compare_20260719.json`,
+`results/results_suite_asl_ampl_20260719.json`).
+
+| Problem | JuMP `copy_to` | AMPL .nl write | AMPL .nl read | AMPL derivative evals | AMPL total |
+|---|---|---|---|---|---|
+| SimpleLP (10⁷) | 42.0 | 58.7 | 49.1 | 9.72 | 120.6 |
+| ScalarParamLP | 1.16 | 11.1 | 8.9 | 0.32 | 21.1 |
+| FullParamLP | 0.53 | 4.5 | 4.5 | 0.17 | 9.1 |
+| LeastSquares | 0.79 | 8.7 | 8.3 | 0.42 | 18.9 |
+| SimpleQP | 0.76 | 16.2 | 16.5 | 1.98 | 35.6 |
+| ParametrizedQP | 0.79 | 9.3 | 8.8 | 0.53 | 18.6 |
+| HuberRegression | 0.71 | 8.6 | 8.1 | 0.48 | 17.5 |
+| SVM + L1 | 0.59 | 25.8 | 24.0 | 1.06 | 50.0 |
+| ConeMatrixStuffing | 2 ms | 44 ms | 96 ms | 3 ms | 31 ms |
+| SmallMatrixStuffing | 1 ms | 11 ms | 27 ms | 1 ms | 39 ms |
+| ParamConeStuffing | 0.2 ms | 5 ms | 54 ms | 1 ms | 12 ms |
+| ParamSmallStuffing | 0.2 ms | 6 ms | 54 ms | 1 ms | 13 ms |
+| Yitzhaki | 0.16 | 3.5 | 7.4 | 0.37 | 18.3 |
+| Murray | 0.17 | 6.0 | 5.5 | 0.20 | 11.7 |
+| Cajas | 0.11 | 6.5 | 7.0 | 0.25 | 13.8 |
+| OptimalAdvertising | 0.16 | —¹ | — | — | — |
+| FactorCovarianceModel | 0.37 | 11.6 | 13.3 | 0.72 | 26.1 |
+| ConvexPlasticity | 17 ms | 0.20 | 0.22 | 17 ms | 0.41 |
+| TvInpainting | 0.85 | 8.2 | 6.4 | 0.22 | 14.9 |
+| SDP | 0.12 | 1.5 | 1.5 | 0.11 | 3.1 |
+| SlowPruning | —² | — | — | — | — |
+
+¹ AMPL's translator rejects the NaN-poisoned instance (see conclusion 3).
+² Both stacks OOM on the 8.4M-nnz kron block through this 16 GB machine's
+harness path (small-size verified MATCH for JuMP).
+
+Reading notes: the stage splits come from the instrumented draw while totals
+are suite medians, so rows need not sum exactly — visible on Yitzhaki (an
+instrumented draw faster than the median) and inverted on the millisecond
+stuffing rows, where the instrumented draw is cold (file-cache) and the
+median of repeats is warmer than its own decomposition. Excluded build stages
+per the fairness rules: JuMP's macro build (7–9 s typical, 29 min at n=10⁷)
+is where its coefficient gathering happens; AMPL's `build_s` blends harness
+prep with amplpy data transfer. The headline contrast: JuMP's in-memory
+assembly is the floor everywhere it fits in memory, AMPL pays a serialization
+tax of ~1 s per 10–20 MB of .nl in each direction, and on every single
+problem the actual *derivative* work (last-but-one column) is a rounding
+error next to that tax.
+
+### End-to-end model→solver handoff: `jump_e2e/` (CVXPY vs idiomatic JuMP)
+
+`jump_e2e/` charges each stack the full user pipeline up to the moment SCS
+could start — native user model → canonicalization → SCS input form
+materialized; **the solver is never run by the timed comparison** — on
+identical raw arrays (`jump_e2e/problems.py`, seeds byte-identical to the
+Specs). CVXPY side: fresh Problem + `get_problem_data(solver=SCS)`; JuMP
+side: macro build + `MOI.copy_to` into the bridged `SCS.Optimizer` cache
+(SCS.jl's own zero-based-CSC input form). One JuMP model per file under
+`jump_e2e/models/`, each docstring stating the CVXPY original and the
+epigraph rewriting used, so the mathematical equivalence is checkable by
+hand. The two sides' SCS inputs are equivalent but not bit-identical
+(different bridge/reformulation choices), so correctness is gated on optimal
+values via the opt-in `--verify`, the only mode that actually solves. See
+`jump_e2e/README.md` for commands and fairness rules.
+
 ## Files
 
 - `casadi_compare.py` — harness: Spec contract, extraction, verification, timing.
@@ -322,7 +391,21 @@ read timed as AMPL work) are the planned v2 of this pipeline; see
   `uni_coloring` sizes vs measured jacobian time, dense/sparse/tridiagonal),
   and `probe_sx_vs_mx.py` (SX scalar-expansion is 200–300× slower than MX for
   extraction at every size — nodes ~ nnz — and cannot reach benchmark sizes;
-  MX is CasADi's best representation for this workload).
+  MX is CasADi's best representation for this workload), and
+  `probe_hierarchical_trace.py` (stage split detection / coloring /
+  accumulation on the exact ParametrizedQP rows: the paper's Example-1
+  tridiagonal control reproduces (3 colors), detection+coloring stay minor,
+  and the minutes sit in accumulation = one AD sweep per color with
+  colors = the dense block's full column dimension; constant-DM and
+  parameter-MX A cost the same. Corollary for the commonly-suggested
+  mitigations: hand-supplying the pattern à la `Sparsity.dense` could at
+  best remove detection — <1 % of the bill at suite size (8.2 s of ~892 s
+  on ParametrizedQP) — because coloring a dense block still yields n colors
+  and n sweeps; the only true bypass is supplying the Jacobian coefficients
+  themselves, which is declared-structure extraction, i.e. the other
+  paradigm in this comparison).
+- `jump_e2e/` — end-to-end user-model→SCS-solution comparison vs idiomatic
+  JuMP; one model file per problem (see `jump_e2e/README.md`).
 - `extras/` — an early draft (parametric Newton re-solves via the derivative oracle),
   kept for reference.
 

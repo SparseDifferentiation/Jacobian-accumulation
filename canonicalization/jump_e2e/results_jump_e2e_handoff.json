@@ -1,0 +1,117 @@
+[
+  {
+    "name": "LeastSquares",
+    "parametric": false,
+    "jump": {
+      "build_s": 12.122340189,
+      "handoff_s": 1.981337582,
+      "e2e_s": 14.13112633,
+      "versions": {
+        "JuMP": "1.30.1",
+        "MathOptInterface": "1.51.2",
+        "SCS": "2.6.4",
+        "julia": "1.12.6"
+      }
+    },
+    "cvxpy": {
+      "build_s": 0.090655269974377,
+      "handoff_s": 8.946133945020847,
+      "e2e_s": 8.947090438043233,
+      "versions": {
+        "cvxpy": "0.1.0.dev3996+gca08a26d1"
+      }
+    }
+  },
+  {
+    "name": "SimpleQP",
+    "parametric": false,
+    "jump": {
+      "build_s": 6.656532479,
+      "handoff_s": 2.351680642,
+      "e2e_s": 9.081339783,
+      "versions": {
+        "JuMP": "1.30.1",
+        "MathOptInterface": "1.51.2",
+        "SCS": "2.6.4",
+        "julia": "1.12.6"
+      }
+    },
+    "cvxpy": {
+      "build_s": 0.08877348201349378,
+      "handoff_s": 10.468392142967787,
+      "e2e_s": 10.511199600005057,
+      "versions": {
+        "cvxpy": "0.1.0.dev3996+gca08a26d1"
+      }
+    }
+  },
+  {
+    "name": "ParametrizedQP",
+    "parametric": true,
+    "jump": {
+      "build_s": 13.587391814,
+      "handoff_s": 2.80965665,
+      "e2e_s": 16.397048464,
+      "versions": {
+        "JuMP": "1.30.1",
+        "MathOptInterface": "1.51.2",
+        "SCS": "2.6.4",
+        "julia": "1.12.6"
+      }
+    },
+    "cvxpy": {
+      "build_s": 0.4746847039787099,
+      "handoff_s": 2.512712511990685,
+      "e2e_s": 2.952375561988447,
+      "versions": {
+        "cvxpy": "0.1.0.dev3996+gca08a26d1"
+      }
+    }
+  },
+  {
+    "name": "HuberRegression",
+    "parametric": false,
+    "jump": {
+      "build_s": 4.745108549,
+      "handoff_s": 2.679514251,
+      "e2e_s": 7.587596484,
+      "versions": {
+        "JuMP": "1.30.1",
+        "MathOptInterface": "1.51.2",
+        "SCS": "2.6.4",
+        "julia": "1.12.6"
+      }
+    },
+    "cvxpy": {
+      "build_s": 0.0915531920036301,
+      "handoff_s": 10.954279283003416,
+      "e2e_s": 11.047104505007155,
+      "versions": {
+        "cvxpy": "0.1.0.dev3996+gca08a26d1"
+      }
+    }
+  },
+  {
+    "name": "SVMWithL1Regularization",
+    "parametric": true,
+    "jump": {
+      "build_s": 8.738200367,
+      "handoff_s": 1.867013704,
+      "e2e_s": 10.675038284,
+      "versions": {
+        "JuMP": "1.30.1",
+        "MathOptInterface": "1.51.2",
+        "SCS": "2.6.4",
+        "julia": "1.12.6"
+      }
+    },
+    "cvxpy": {
+      "build_s": 0.27827975200489163,
+      "handoff_s": 1.7948988719726913,
+      "e2e_s": 2.073178623977583,
+      "versions": {
+        "cvxpy": "0.1.0.dev3996+gca08a26d1"
+      }
+    }
+  }
+]
