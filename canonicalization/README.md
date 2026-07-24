@@ -72,12 +72,15 @@ Knobs: `--only Name1,Name2` restricts problems; `CASADI_ITERS`/`CASADI_RESOLVES`
 `BENCH_ITERS`/`BENCH_ONLY`/`BENCH_OUT` control repetition and output. Pin BLAS to one
 thread (as above) for comparable numbers.
 
-**Engine version caveat**: warm re-solve numbers exercise the cached-program refresh
-path and require an engine with the composite `param_source` refresh fix
-([SparseDiffEngine #107](https://github.com/SparseDifferentiation/SparseDiffEngine/pull/107)).
-PyPI `sparsediffpy 0.6.0` predates it — cold/single extraction numbers are valid there,
-but for re-solves build SparseDiffPy from source with the engine at
-`param-source-mark-refresh` (or any release containing it).
+**Engine version caveat**: all timing runs need `sparsediffpy` ≥ 0.6.1. PyPI
+0.6.0 lacks the composite `param_source` refresh fix
+([SparseDiffEngine #107](https://github.com/SparseDifferentiation/SparseDiffEngine/pull/107)),
+invalidating warm re-solves, **and** the "Swedish" sparsity-fill gather (424ddde),
+whose absence makes even cold extraction quadratic on large PSD blocks
+(SemidefiniteProgramming 433.8 s vs 2.0 s, QuantumHilbertMatrix 22.2 s vs 2.1 s —
+`results/results_backends_scipy_coo_20260724.txt`). `uv sync` silently downgrades
+the venv to PyPI 0.6.0: check the engine version after every sync and reinstall
+the local build if needed (see CLAUDE.md).
 
 ## Reference results
 
@@ -386,7 +389,16 @@ values via the opt-in `--verify`, the only mode that actually solves. See
   `suite_compare.py` — the tool-neutral full-suite versions (JuMP + ASL).
 - `probes/` — the mechanism experiments quoted above, plus `probe_qpsol_path.py`
   (CasADi's own `qpsol`/`hessian`/`quadratic_coeff` routes vs the harness path:
-  all slower, so the harness understates CasADi's cost on its own QP interface)
+  all slower, so the harness understates CasADi's cost on its own QP interface;
+  its path E measures the other commonly-suggested route, "pass DM matrices
+  through the low-level `conic` interface": no extraction happens there —
+  `conic` takes the numeric `(H, A)` the other paths exist to compute, so the
+  canonicalization has simply moved to the user (0.6 s of numpy assembly at
+  n=800, declared-structure extraction by hand) — and even then qrqp's
+  structural setup on the dense declared pattern costs 30.8 s at n=800, 7×
+  the harness's entire extraction path; the harness already uses `DM` for
+  every constant in the user's data anyway. Results in
+  `results/results_probe_qpsol_path_20260724.txt`)
   and `probe_coloring_sweeps.py` (makes the sweep counts visible:
   `uni_coloring` sizes vs measured jacobian time, dense/sparse/tridiagonal),
   and `probe_sx_vs_mx.py` (SX scalar-expansion is 200–300× slower than MX for

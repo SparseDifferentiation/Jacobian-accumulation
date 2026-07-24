@@ -1,0 +1,70 @@
+probe_qpsol_path.py --big results, measured 2026-07-24.
+Machine: MacBook Pro (15-inch, 2018), 6-core Intel i7-8850H, 16 GB RAM, macOS 15.7.
+Python 3.14.4, casadi 3.7.2 (PyPI), numpy 2.4.6, BLAS pinned to 1 thread
+(OMP/OPENBLAS/MKL/VECLIB *_NUM_THREADS=1). No timing job ran concurrently.
+
+Context: re-run of the 2026-07-16 paths A-D (same machine/versions; A and C
+reproduce within noise) plus the NEW path E, added to answer recurring
+third-party advice "pass DM matrices through the low-level conic interface":
+  E1  user-side assembly of numeric (H, A) as DMs -- i.e. the canonicalization
+      done BY HAND, outside CasADi (numpy vstack + DM copy);
+  E2  ca.conic('S','qrqp', {'h': H.sparsity(), 'a': A.sparsity()}) construction
+      from the declared sparsity only.  No solve is performed.
+
+============================================================================
+probe_qpsol_path.py --big
+(all of A-D end with numeric (P, c, A, b); SimpleQP family, m = 5n, dense P/G)
+============================================================================
+n=100 (m=500):
+    A harness: jac(grad(f)) + jac(g) + eval           0.05s
+    B hessian(f,x) + jac(g) + eval                    0.06s
+    C qpsol('qrqp') construction                      0.15s
+    D quadratic_coeff + linear_coeff + eval           0.07s
+    E1 user-side assembly of (H, A) as DM             0.01s
+    E2 conic('qrqp') ctor, declared sparsity          0.09s
+n=200 (m=1000):
+    A harness: jac(grad(f)) + jac(g) + eval           0.14s
+    B hessian(f,x) + jac(g) + eval                    0.64s
+    C qpsol('qrqp') construction                      1.21s
+    D quadratic_coeff + linear_coeff + eval           0.66s
+    E1 user-side assembly of (H, A) as DM             0.03s
+    E2 conic('qrqp') ctor, declared sparsity          0.58s
+n=400 (m=2000):
+    A harness: jac(grad(f)) + jac(g) + eval           0.86s
+    B hessian(f,x) + jac(g) + eval                    8.39s
+    C qpsol('qrqp') construction                     13.05s
+    D quadratic_coeff + linear_coeff + eval           8.59s
+    E1 user-side assembly of (H, A) as DM             0.14s
+    E2 conic('qrqp') ctor, declared sparsity          4.50s
+n=800 (m=4000):
+    A harness: jac(grad(f)) + jac(g) + eval           4.41s
+    B hessian(f,x) + jac(g) + eval                  124.92s
+    C qpsol('qrqp') construction                    152.48s
+    D quadratic_coeff + linear_coeff + eval         122.18s
+    E1 user-side assembly of (H, A) as DM             0.61s
+    E2 conic('qrqp') ctor, declared sparsity         30.82s
+
+Conclusions
+-----------
+1. The extraction content of path E is E1 alone (0.61 s at n=800): the user
+   hand-assembles (H, A), i.e. does the canonicalization themselves, outside
+   CasADi.  That is declared-structure extraction -- the other paradigm in
+   this comparison -- not a faster way for CasADi to extract; in the
+   benchmark it would put the lowered matrices outside the timer entirely
+   (prohibited by the fairness rules).
+2. E2 is NOT near-zero: qrqp's structural setup (KKT sparsity assembly +
+   symbolic factorization analysis) on the dense declared pattern costs
+   30.8 s at n=800, scaling ~x7 per size doubling.  So even after the user
+   has done all the extraction work by hand, CasADi's conic front-end spends
+   7x the harness's entire A-path extraction time (4.4 s) on dense-block
+   structure before any solve.  This is solver init, outside the extraction
+   comparison's scope, but it shows the conic-with-DM route is not the free
+   lunch the advice suggests.
+3. C (qpsol ctor) minus E2 (conic ctor) ~= 122 s at n=800, matching B/D: the
+   AD extraction inside qpsol is the hessian-path cost, as concluded on
+   2026-07-16.  The harness A-path remains the fastest CasADi extraction
+   route at every size.
+4. "Use DM for constants" is already the harness default (every constant in
+   the user's data is a DM in casadi_compare.py), and DM does not shortcut
+   jacobian(): constant-DM vs parametric-MX A cost the same
+   (results_probe_hierarchical_trace_20260719.txt).

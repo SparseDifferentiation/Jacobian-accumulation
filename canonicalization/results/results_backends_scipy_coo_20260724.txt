@@ -1,0 +1,85 @@
+Run 2026-07-24 to fill the SCIPY / COO columns absent from the 2026-07-11
+reference (results_thesis_final_20260711_pr102.txt, which ran
+BENCH_BACKENDS=CPP,DIFFENGINE,DE_DPP only). CPP and DIFFENGINE re-run here
+for same-day comparability; DE_DPP intentionally omitted.
+Machine: MacBook Pro (15-inch, 2018), 6-core Intel i7-8850H, 16 GB RAM,
+macOS 15.7. numpy 2.4.6, scipy 1.17.1, BLAS pinned to 1 thread
+(OMP/OPENBLAS/MKL/VECLIB *_NUM_THREADS=1). No timing job ran concurrently.
+Engine build: cvxpy fork Transurgeon/cvxpy@pr-c-resolve-caching commit
+ca08a26d1 (uv.lock), engine = PyPI sparsediffpy 0.6.0 (a uv sync had
+replaced the local dev build; the 2026-07-11 reference ran a local
+main+#107 build). ROOT CAUSE of the two DIFFENG outliers, confirmed same
+day: 0.6.0 predates the engine's "Swedish algorithm for sparsity fill"
+(424ddde, released in v0.6.1), which replaced an O(n_vars x n_blocks x
+A_rows) Jacobian-init scan in block_left_multiply_fill_sparsity /
+csr_csc_matmul_alloc with a linear gather -- the quadratic scan explodes
+exactly on the two large-PSD-block problems. Re-run on the local dev build
+(sparsediffpy 0.7.0.dev, engine main = Swedish + #107):
+  SemidefiniteProgramming  DIFFENG  433.76s (0.6.0) ->  1.98s  (ref 1.93s)
+  QuantumHilbertMatrix     DIFFENG   22.24s (0.6.0) ->  2.07s  (ref 1.64s)
+Use these corrected values (or the 2026-07-11 reference) when quoting
+DIFFENG for those two rows; all other DIFFENG rows match the reference
+within noise, and the CPP/SCIPY/COO columns never touch the engine.
+Command: BENCH_TIMEOUT=1200 BENCH_BACKENDS=CPP,DIFFENGINE,SCIPY,COO
+  BENCH_OUT=results/results_backends_scipy_coo_20260724.txt
+  python canonicalization/run_backend_benchmarks.py
+
+Upstream cvxpy/benchmarks suite: canonicalization backends + ignore_dpp
+=======================================================================
+Source:  https://github.com/cvxpy/benchmarks (cloned, run as is)
+cvxpy:   0.1.0.dev3996+gca08a26d1   python: 3.14.4   platform: darwin
+timeout: 1200s/problem   solver=CLARABEL (uniform, for comparability)
+
+Table 1 = COLD first-compile time (s) of each problem under each canon backend
+  (fresh setup + get_problem_data per backend). CPP is the default backend;
+  DIFFENG is the ignore_dpp=True path; DE_DPP is explicit canon_backend=DIFFENGINE
+  on the normal DPP path (no fold, capsule cached; non-DPP rows fall back to the
+  ignore_dpp path). 'd/CPP' = DIFFENG / CPP (<1 = diffengine faster).
+Table 2 = re-compile time (s) with changing parameters (parametric problems only),
+  mean of 3, fresh instance per strategy: dpp=default (cached DPP tensor),
+  diffengine=ignore_dpp (capsule rebuilt
+  per solve), de_cached=canon_backend=DIFFENGINE on the DPP path (cached C problem,
+  re-evaluates the expression tree only).
+
+Table 1 -- cold first-compile (s) by canon backend
+benchmark                                        n_vars  dpp?       CPP     SCIPY       COO   DIFFENG    DE_DPP   d/CPP         status
+--------------------------------------------------------------------------------------------------------------------------------------
+finance.CVaRBenchmark                               769   yes   36.5051   27.3233   26.6824   29.3203         -   0.80x             ok
+finance.FactorCovarianceModel                    25,250   yes    5.4631    4.2072    5.0397    3.7195         -   0.68x             ok
+gini_portfolio.Cajas                              2,450   yes   20.6171    2.9155    3.1750    1.0888         -   0.05x             ok
+gini_portfolio.Murray                           245,400   yes    6.3529    3.7316    3.8668    5.4353         -   0.86x             ok
+gini_portfolio.Yitzhaki                          44,900   yes    3.0606    2.8036    3.1143    0.5379         -   0.18x             ok
+high_dim_convex_plasticity.ConvexPlasticity      15,000   yes    2.4030 ERR:ValueError ERR:ValueError    2.1925         -   0.91x             ok
+huber_regression.HuberRegression                  3,000   yes   11.3388   10.0715   10.6090    1.6154         -   0.14x             ok
+matrix_stuffing.ConeMatrixStuffingBench           5,000   yes   11.5560    9.4410   16.4908    3.8198         -   0.33x             ok
+matrix_stuffing.ParamConeMatrixStuffing             200   yes    0.2853    7.4546    0.2679    0.1345         -   0.47x             ok
+matrix_stuffing.ParamSmallMatrixStuffing            300   yes    0.4929   27.9629    0.4172    0.2229         -   0.45x             ok
+matrix_stuffing.SmallMatrixStuffing               4,000   yes    6.5405    7.2040   10.2752    2.9021         -   0.44x             ok
+optimal_advertising.OptimalAdvertising          250,000   yes    6.0138    2.1761    2.0773    5.5890         -   0.93x             ok
+quantum_hilbert_matrix.QuantumHilbertMatrix       4,096   yes    3.9776    3.7961    4.4738   22.2103         -   5.58x             ok
+sdp_segfault_1132_benchmark.SDPSegfault1132Benchmark      9,801   yes   61.3304   10.1245   40.1379   16.6670         -   0.27x             ok
+semidefinite_programming.SemidefiniteProgramming     40,000   yes    5.3224    2.3109    3.5338  433.5859         -  81.46x             ok
+simple_LP_benchmarks.SimpleFullyParametrizedLPBenchmark          -     -    2.4300         -         -    0.4748         -   0.20x crashed/killed
+simple_LP_benchmarks.SimpleLPBenchmark       10,000,000   yes   29.9782   28.9198   27.2270    5.2066         -   0.17x             ok
+simple_LP_benchmarks.SimpleScalarParametrizedLPBenchmark  2,000,000   yes    4.8429    4.3294    4.5237    0.9038         -   0.19x             ok
+simple_QP_benchmarks.LeastSquares                 2,000   yes    8.6445    9.1560   10.1844    1.4051         -   0.16x             ok
+simple_QP_benchmarks.ParametrizedQPBenchmark          -     -   10.1235         -         -    2.2897         -   0.23x TIMEOUT(>1200s)
+simple_QP_benchmarks.SimpleQPBenchmark            1,600   yes   10.2813   10.1675   11.2341    1.7099         -   0.17x             ok
+simple_QP_benchmarks.UnconstrainedQP                 18   yes    9.0350    6.4739   12.1241    0.0799         -   0.01x             ok
+slow_pruning_1668_benchmark.SlowPruningBenchmark      2,000   yes    6.7343    6.8481    7.5820    2.1852         -   0.32x             ok
+svm_l1_regularization.SVMWithL1Regularization        501   yes   11.2938    8.7760    9.5277    1.6033         -   0.14x             ok
+tv_inpainting.TvInpainting                      786,432   yes    3.4870    3.1542    3.3067    1.0533         -   0.30x             ok
+
+Table 2 -- re-compile (s) with changing parameters (parametric problems only)
+benchmark                                        n_vars        dpp   eval_par    diffeng  de_cached  dec vs dpp
+---------------------------------------------------------------------------------------------------------------
+finance.FactorCovarianceModel                    25,250     0.1534     0.2790     0.2906       1.89x
+high_dim_convex_plasticity.ConvexPlasticity      15,000     0.7094     0.7351     0.7511       1.06x
+matrix_stuffing.ParamConeMatrixStuffing             200     0.0028     0.0008     0.0008       0.29x
+matrix_stuffing.ParamSmallMatrixStuffing            300     0.0047     0.0014     0.0014       0.29x
+simple_LP_benchmarks.SimpleScalarParametrizedLPBenchmark  2,000,000     0.3130     0.2435     0.3086       0.99x
+svm_l1_regularization.SVMWithL1Regularization        501     0.2600     0.4936     0.4971       1.91x
+
+Errors:
+  cold high_dim_convex_plasticity.ConvexPlasticity [SCIPY]: ERR:ValueError
+  cold high_dim_convex_plasticity.ConvexPlasticity [COO]: ERR:ValueError

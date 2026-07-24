@@ -30,9 +30,15 @@ Jacobian accumulation cost compared to knowing the derivative structure per atom
 
 - `uv sync` creates `.venv/` with casadi, numpy, scipy, the CVXPY diff-engine fork
   (`Transurgeon/cvxpy@pr-c-resolve-caching`), and `sparsediffpy`.
-- IMPORTANT: warm re-solve benchmarks need an engine build containing the
-  composite-`param_source` refresh fix (SparseDiffEngine #107). PyPI 0.6.0 lacks it;
-  cold-extraction numbers are still valid there. Local dev builds install via
+- IMPORTANT: benchmarks need sparsediffpy ≥ 0.6.1 (engine with the #107
+  composite-`param_source` refresh fix AND the "Swedish" sparsity-fill gather,
+  424ddde). PyPI 0.6.0 lacks both: its warm re-solves are invalid, and its cold
+  extraction has a quadratic Jacobian-init scan that explodes on large PSD blocks
+  (SemidefiniteProgramming 433.8 s vs 2.0 s, QuantumHilbertMatrix 22.2 s vs 2.1 s
+  — see results_backends_scipy_coo_20260724.txt). `uv sync` silently downgrades
+  the venv back to PyPI 0.6.0 — after any sync, check
+  `python -c "import importlib.metadata as m; print(m.version('sparsediffpy'))"`
+  and reinstall the local dev build via
   `uv pip install --python .venv/bin/python --force-reinstall --no-deps <path-to-SparseDiffPy>`.
 - The backend runner needs `git clone --depth 1 https://github.com/cvxpy/benchmarks
   canonicalization/cvxpy_benchmarks` (gitignored).

@@ -1,0 +1,68 @@
+Parametric re-compile comparison incl. SCIPY/COO backends, run 2026-07-24.
+Answers: do the SCIPY/COO canon backends change warm re-solve times? (No --
+dpp / dpp_coo / dpp_scipy are identical within noise wherever they ran: the
+DPP tensor application at re-solve is shared code; the backend only builds
+the tensor at the cold/warmup compile.)
+Machine: MacBook Pro (15-inch, 2018), 6-core Intel i7-8850H, 16 GB RAM,
+macOS 15.7. numpy 2.4.6, scipy 1.17.1, BLAS pinned to 1 thread
+(OMP/OPENBLAS/MKL/VECLIB *_NUM_THREADS=1). No timing job ran concurrently.
+Engine build: local sparsediffpy 0.7.0.dev (engine main = Swedish sparsity
+fill + #107), cvxpy fork Transurgeon/cvxpy@pr-c-resolve-caching ca08a26d1.
+Command: BENCH_TIMEOUT=1200 BENCH_COLD=0 BENCH_BACKENDS=CPP
+  BENCH_ONLY=<the 8 parametric problems>
+  BENCH_OUT=results/results_recompile_backends_20260724.txt
+  python canonicalization/run_backend_benchmarks.py
+Table 1 here is CPP-only cold (BENCH_COLD=0), for worker metadata; the full
+cold backend comparison is results_backends_scipy_coo_20260724.txt.
+Known blow-ups (consistent with the cold run): SimpleFullyParametrizedLP
+crashed/killed during dpp_scipy warmup (1M vars; SCIPY also crashed its cold
+compile); ParametrizedQP hit the 1200s worker timeout during dpp_scipy
+warmup (SCIPY cold also >1200s); ConvexPlasticity rejects explicit
+SCIPY/COO backends with ValueError (same as cold) despite is_dpp()=True.
+
+Upstream cvxpy/benchmarks suite: canonicalization backends + ignore_dpp
+=======================================================================
+Source:  https://github.com/cvxpy/benchmarks (cloned, run as is)
+cvxpy:   0.1.0.dev3996+gca08a26d1   python: 3.14.4   platform: darwin
+timeout: 1200s/problem   solver=CLARABEL (uniform, for comparability)
+
+Table 1 = COLD first-compile time (s) of each problem under each canon backend
+  (fresh setup + get_problem_data per backend). CPP is the default backend;
+  DIFFENG is the ignore_dpp=True path; DE_DPP is explicit canon_backend=DIFFENGINE
+  on the normal DPP path (no fold, capsule cached; non-DPP rows fall back to the
+  ignore_dpp path). 'd/CPP' = DIFFENG / CPP (<1 = diffengine faster).
+Table 2 = re-compile time (s) with changing parameters (parametric problems only),
+  mean of 3, fresh instance per strategy: dpp=default (cached DPP tensor),
+  diffengine=ignore_dpp (capsule rebuilt
+  per solve), de_cached=canon_backend=DIFFENGINE on the DPP path (cached C problem,
+  re-evaluates the expression tree only), dpp_coo/dpp_scipy=explicit COO/SCIPY
+  canon backend on the DPP path (tensor built by that backend at warmup,
+  re-compiles re-apply parameters).
+
+Table 1 -- cold first-compile (s) by canon backend
+benchmark                                        n_vars  dpp?       CPP     SCIPY       COO   DIFFENG    DE_DPP   d/CPP         status
+--------------------------------------------------------------------------------------------------------------------------------------
+finance.FactorCovarianceModel                    25,250   yes    4.9924         -         -         -         -       -             ok
+high_dim_convex_plasticity.ConvexPlasticity      15,000   yes    2.1405         -         -         -         -       -             ok
+matrix_stuffing.ParamConeMatrixStuffing             200   yes    0.2903         -         -         -         -       -             ok
+matrix_stuffing.ParamSmallMatrixStuffing            300   yes    0.4484         -         -         -         -       -             ok
+simple_LP_benchmarks.SimpleFullyParametrizedLPBenchmark  1,000,000   yes    2.1425         -         -         -         -       - crashed/killed
+simple_LP_benchmarks.SimpleScalarParametrizedLPBenchmark  2,000,000   yes    5.1227         -         -         -         -       -             ok
+simple_QP_benchmarks.ParametrizedQPBenchmark      2,400   yes    9.9776         -         -         -         -       - TIMEOUT(>1200s)
+svm_l1_regularization.SVMWithL1Regularization        501   yes   11.2038         -         -         -         -       -             ok
+
+Table 2 -- re-compile (s) with changing parameters (parametric problems only)
+benchmark                                        n_vars        dpp    diffeng  de_cached    dpp_coo  dpp_scipy  dec vs dpp
+--------------------------------------------------------------------------------------------------------------------------
+finance.FactorCovarianceModel                    25,250     0.1439     0.2649     0.2961     0.1438     0.1440       2.06x
+high_dim_convex_plasticity.ConvexPlasticity      15,000     0.6607     0.6590     0.6588        ERR        ERR       1.00x
+matrix_stuffing.ParamConeMatrixStuffing             200     0.0028     0.0008     0.0008     0.0027     0.0029       0.28x
+matrix_stuffing.ParamSmallMatrixStuffing            300     0.0047     0.0014     0.0014     0.0047     0.0050       0.29x
+simple_LP_benchmarks.SimpleFullyParametrizedLPBenchmark  1,000,000     0.2262     0.1266     0.1190     0.2247          -       0.53x
+simple_LP_benchmarks.SimpleScalarParametrizedLPBenchmark  2,000,000     0.3131     0.2416     0.2313     0.2934     0.3158       0.74x
+simple_QP_benchmarks.ParametrizedQPBenchmark      2,400     1.3056     0.9290     0.9442     1.3230          -       0.72x
+svm_l1_regularization.SVMWithL1Regularization        501     0.2578     0.5033     0.4854     0.2572     0.2548       1.88x
+
+Errors:
+  recompile high_dim_convex_plasticity.ConvexPlasticity [dpp_coo]: ValueError: canon_backend='COO' cannot be used for a parametrized problem that is not DPP (or is solved with ignore_dpp=
+  recompile high_dim_convex_plasticity.ConvexPlasticity [dpp_scipy]: ValueError: canon_backend='SCIPY' cannot be used for a parametrized problem that is not DPP (or is solved with ignore_dp

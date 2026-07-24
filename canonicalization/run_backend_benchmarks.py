@@ -81,8 +81,13 @@ COMPARE_SOLVER = "CLARABEL"  # uniform solver so all backends are comparable
 BACKENDS = [b.strip() for b in os.environ.get(
     "BENCH_BACKENDS", "CPP,DIFFENGINE,DE_DPP,SCIPY,COO").split(",") if b.strip()]
 
-# Re-compilation strategies (parametric problems only).
-STRATEGIES = ["diffengine", "de_cached", "dpp"]
+# Re-compilation strategies (parametric problems only). dpp_coo / dpp_scipy
+# are the DPP-cached-tensor path with an explicit COO / SCIPY canon backend
+# (the tensor is rebuilt by that backend at the warmup compile; re-compiles
+# then re-apply parameters). They run LAST so the established comparison
+# survives if a backend crashes or times the worker out (SCIPY did both on
+# cold compiles, hence its final slot).
+STRATEGIES = ["diffengine", "de_cached", "dpp", "dpp_coo", "dpp_scipy"]
 
 
 # --------------------------------------------------------------------------- #
@@ -173,6 +178,10 @@ def _time_strategy(Cls, strategy, rng):
         if not prob.is_dpp():
             raise ValueError("not DPP: de_cached == diffengine here")
         kwargs["canon_backend"] = "DIFFENGINE"
+    elif strategy in ("dpp_scipy", "dpp_coo"):
+        if not prob.is_dpp():
+            raise ValueError("not DPP: explicit backend needs the DPP path")
+        kwargs["canon_backend"] = "SCIPY" if strategy == "dpp_scipy" else "COO"
     for p in params:  # one warmup compile to populate caches
         _assign_param(p, rng)
     prob.get_problem_data(**kwargs)
@@ -360,7 +369,9 @@ def header():
         f"  mean of {ITERS}, fresh instance per strategy: dpp=default (cached DPP tensor),\n"
         "  diffengine=ignore_dpp (capsule rebuilt\n"
         "  per solve), de_cached=canon_backend=DIFFENGINE on the DPP path (cached C problem,\n"
-        "  re-evaluates the expression tree only)."
+        "  re-evaluates the expression tree only), dpp_coo/dpp_scipy=explicit COO/SCIPY\n"
+        "  canon backend on the DPP path (tensor built by that backend at warmup,\n"
+        "  re-compiles re-apply parameters)."
     )
 
 
@@ -409,8 +420,9 @@ def render(rows):
     param_rows = [r for r in rows if r.get("comparison")]
     lines.append("")
     lines.append("Table 2 -- re-compile (s) with changing parameters (parametric problems only)")
-    h2 = (f"{'benchmark':44} {'n_vars':>10} {'dpp':>10} {'eval_par':>10} "
-          f"{'diffeng':>10} {'de_cached':>10} {'dec vs dpp':>11}")
+    h2 = (f"{'benchmark':44} {'n_vars':>10} {'dpp':>10} "
+          f"{'diffeng':>10} {'de_cached':>10} {'dpp_coo':>10} "
+          f"{'dpp_scipy':>10} {'dec vs dpp':>11}")
     lines.append(h2)
     lines.append("-" * len(h2))
     for r in param_rows:
@@ -436,6 +448,7 @@ def render(rows):
         lines.append(
             f"{label:44} {nv_s:>10} {cv('dpp'):>10} "
             f"{cv('diffengine'):>10} {cv('de_cached'):>10} "
+            f"{cv('dpp_coo'):>10} {cv('dpp_scipy'):>10} "
             f"{ratio('de_cached','dpp'):>11}"
         )
 
