@@ -1,0 +1,93 @@
+Replication run 2026-07-24 (evening): full five-backend sweep on the CURRENT
+engine dev build, to confirm the 2026-07-11 reference (CPP/DIFFENG/DE_DPP,
+results_thesis_final_20260711_pr102.txt) and the 2026-07-24 SCIPY/COO columns
+(results_backends_scipy_coo_20260724.txt) on one engine version.
+Machine: MacBook Pro (15-inch, 2018), 6-core Intel i7-8850H, 16 GB RAM,
+macOS 15.7. numpy 2.4.6, scipy 1.17.1, BLAS pinned to 1 thread
+(OMP/OPENBLAS/MKL/VECLIB *_NUM_THREADS=1). No timing job ran concurrently.
+Engine build: cvxpy fork Transurgeon/cvxpy@pr-c-resolve-caching ca08a26d1,
+sparsediffpy 0.7.0 built fresh from local ~/Documents/SparseDiffPy
+(engine submodule 4172c5e = Swedish sparsity fill c549c64 + #107 fix),
+force-reinstalled immediately before the run.
+VERDICT: every cell replicates the corresponding reference within noise
+(typically <5%, worst ~13% on SDPSegfault DIFFENG) except two cells, both
+resolved by same-day single-problem probes:
+  - SimpleFullyParametrizedLP DIFFENG 1.35s here vs 0.45s reference: probe
+    (BENCH_ONLY, CPP/DIFFENGINE/DE_DPP) gives 0.457/0.483s, matching the
+    reference; the 1.35s ~5.5h into this run was a transient. Warm row also
+    replicates (0.231/0.122/0.121 vs 0.230/0.124/0.123). NOT a regression.
+  - SemidefiniteProgramming SCIPY 4.40s here vs 2.31s on 07-24: two probes
+    give 2.71s and 2.60s -- true value ~2.3-2.7s, the 4.40s was inflated.
+The four DIFFENG rows contaminated by PyPI 0.6.0 in the 07-24 sweep all
+reproduce the 07-11 reference on this build: SemidefiniteProgramming 1.92
+(ref 1.93), QuantumHilbertMatrix 1.62 (1.64), FactorCovarianceModel 0.76
+(0.73), Murray 3.56 (3.43). Failures also replicate: ConvexPlasticity
+SCIPY/COO ValueError, SimpleFullyParametrizedLP worker crash under SCIPY,
+ParametrizedQP SCIPY >1200s timeout.
+Command: BENCH_TIMEOUT=1200 BENCH_BACKENDS=CPP,DIFFENGINE,DE_DPP,SCIPY,COO
+  BENCH_OUT=results/results_backends_all_20260724_repl.txt
+  python canonicalization/run_backend_benchmarks.py
+
+Upstream cvxpy/benchmarks suite: canonicalization backends + ignore_dpp
+=======================================================================
+Source:  https://github.com/cvxpy/benchmarks (cloned, run as is)
+cvxpy:   0.1.0.dev3996+gca08a26d1   python: 3.14.4   platform: darwin
+timeout: 1200s/problem   solver=CLARABEL (uniform, for comparability)
+
+Table 1 = COLD first-compile time (s) of each problem under each canon backend
+  (fresh setup + get_problem_data per backend). CPP is the default backend;
+  DIFFENG is the ignore_dpp=True path; DE_DPP is explicit canon_backend=DIFFENGINE
+  on the normal DPP path (no fold, capsule cached; non-DPP rows fall back to the
+  ignore_dpp path). 'd/CPP' = DIFFENG / CPP (<1 = diffengine faster).
+Table 2 = re-compile time (s) with changing parameters (parametric problems only),
+  mean of 3, fresh instance per strategy: dpp=default (cached DPP tensor),
+  diffengine=ignore_dpp (capsule rebuilt
+  per solve), de_cached=canon_backend=DIFFENGINE on the DPP path (cached C problem,
+  re-evaluates the expression tree only), dpp_coo/dpp_scipy=explicit COO/SCIPY
+  canon backend on the DPP path (tensor built by that backend at warmup,
+  re-compiles re-apply parameters).
+
+Table 1 -- cold first-compile (s) by canon backend
+benchmark                                        n_vars  dpp?       CPP     SCIPY       COO   DIFFENG    DE_DPP   d/CPP         status
+--------------------------------------------------------------------------------------------------------------------------------------
+finance.CVaRBenchmark                               769   yes   35.7728   26.9490   25.9586   26.4712   26.9695   0.74x             ok
+finance.FactorCovarianceModel                    25,250   yes    5.1978    4.1918    4.6040    0.7601    0.7927   0.15x             ok
+gini_portfolio.Cajas                              2,450   yes   20.1446    2.6877    2.7908    1.0611    1.1454   0.05x             ok
+gini_portfolio.Murray                           245,400   yes    6.1084    3.7351    3.9160    3.5613    3.4905   0.58x             ok
+gini_portfolio.Yitzhaki                          44,900   yes    3.1098    2.8084    3.0662    0.4792    0.4861   0.15x             ok
+high_dim_convex_plasticity.ConvexPlasticity      15,000   yes    2.1382 ERR:ValueError ERR:ValueError    2.1560    2.1889   1.01x             ok
+huber_regression.HuberRegression                  3,000   yes   10.5582    9.5520   10.4706    1.6452    1.8122   0.16x             ok
+matrix_stuffing.ConeMatrixStuffingBench           5,000   yes   10.6839    8.7477   16.0616    3.7463    3.9491   0.35x             ok
+matrix_stuffing.ParamConeMatrixStuffing             200   yes    0.2876    7.1133    0.2681    0.1438    0.1229   0.50x             ok
+matrix_stuffing.ParamSmallMatrixStuffing            300   yes    0.4466   27.1622    0.4354    0.1980    0.2028   0.44x             ok
+matrix_stuffing.SmallMatrixStuffing               4,000   yes    6.4676    6.6300    9.7931    2.7208    2.7069   0.42x             ok
+optimal_advertising.OptimalAdvertising          250,000   yes    5.8700    2.0182    1.9924    5.1219    7.4300   0.87x             ok
+quantum_hilbert_matrix.QuantumHilbertMatrix       4,096   yes    3.8459    3.6952    4.3478    1.6235    1.6378   0.42x             ok
+sdp_segfault_1132_benchmark.SDPSegfault1132Benchmark      9,801   yes   59.4519   10.0131   41.4597   14.0981   19.0731   0.24x             ok
+semidefinite_programming.SemidefiniteProgramming     40,000   yes    5.2576    4.3979    3.5026    1.9230    1.9079   0.37x             ok
+simple_LP_benchmarks.SimpleFullyParametrizedLPBenchmark          -     -    2.5563         -         -    1.3485    1.3758   0.53x crashed/killed
+simple_LP_benchmarks.SimpleLPBenchmark       10,000,000   yes   30.1794   32.7732   27.4521    5.0869    6.7537   0.17x             ok
+simple_LP_benchmarks.SimpleScalarParametrizedLPBenchmark  2,000,000   yes    4.9031    4.2638    4.4791    0.8922    0.9408   0.18x             ok
+simple_QP_benchmarks.LeastSquares                 2,000   yes    8.9063    9.1607   10.2603    1.5522    1.6071   0.17x             ok
+simple_QP_benchmarks.ParametrizedQPBenchmark          -     -   10.0839         -         -    2.2558    2.5039   0.22x TIMEOUT(>1200s)
+simple_QP_benchmarks.SimpleQPBenchmark            1,600   yes   10.5082    9.9715   10.9970    1.7067    1.9078   0.16x             ok
+simple_QP_benchmarks.UnconstrainedQP                 18   yes    9.8509    6.9625   12.0765    0.0779    0.0678   0.01x             ok
+slow_pruning_1668_benchmark.SlowPruningBenchmark      2,000   yes    7.0500    7.0275    7.8654    2.2490    2.1451   0.32x             ok
+svm_l1_regularization.SVMWithL1Regularization        501   yes   11.5837    8.5937   10.0252    1.6081    1.8060   0.14x             ok
+tv_inpainting.TvInpainting                      786,432   yes    3.6006    3.2710    3.3493    1.0761    1.1762   0.30x             ok
+
+Table 2 -- re-compile (s) with changing parameters (parametric problems only)
+benchmark                                        n_vars        dpp    diffeng  de_cached    dpp_coo  dpp_scipy  dec vs dpp
+--------------------------------------------------------------------------------------------------------------------------
+finance.FactorCovarianceModel                    25,250     0.1512     0.2782     0.2953     0.1450     0.1449       1.95x
+high_dim_convex_plasticity.ConvexPlasticity      15,000     0.6835     0.6882     0.6723        ERR        ERR       0.98x
+matrix_stuffing.ParamConeMatrixStuffing             200     0.0028     0.0008     0.0008     0.0028     0.0029       0.29x
+matrix_stuffing.ParamSmallMatrixStuffing            300     0.0047     0.0014     0.0014     0.0048     0.0048       0.29x
+simple_LP_benchmarks.SimpleScalarParametrizedLPBenchmark  2,000,000     0.3352     0.2610     0.2469     0.3913     0.3466       0.74x
+svm_l1_regularization.SVMWithL1Regularization        501     0.2662     0.4978     0.5108     0.2946     0.2759       1.92x
+
+Errors:
+  cold high_dim_convex_plasticity.ConvexPlasticity [SCIPY]: ERR:ValueError
+  cold high_dim_convex_plasticity.ConvexPlasticity [COO]: ERR:ValueError
+  recompile high_dim_convex_plasticity.ConvexPlasticity [dpp_coo]: ValueError: canon_backend='COO' cannot be used for a parametrized problem that is not DPP (or is solved with ignore_dpp=
+  recompile high_dim_convex_plasticity.ConvexPlasticity [dpp_scipy]: ValueError: canon_backend='SCIPY' cannot be used for a parametrized problem that is not DPP (or is solved with ignore_dp

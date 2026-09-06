@@ -1,0 +1,51 @@
+Upstream cvxpy/benchmarks suite: canonicalization backends + ignore_dpp
+=======================================================================
+Source:  https://github.com/cvxpy/benchmarks (cloned, run as is)
+cvxpy:   1.9.2   python: 3.14.4   platform: darwin
+timeout: 2400s/problem   solver=CLARABEL (uniform, for comparability)
+backends: CPP,SCIPY,COO,CPP_ND,SCIPY_ND,COO_ND
+strategies: dpp,dpp_coo,dpp_scipy,nodpp_cpp,nodpp_scipy,nodpp_coo
+
+Table 1 = COLD first-compile time (s) of each problem under each canon backend
+  (fresh setup + get_problem_data per backend, since the chain cache key
+  excludes canon_backend).
+Table 2 = re-compile time (s) with changing parameters (parametric problems
+  only), mean of 3, fresh instance per strategy.
+The last column of each table is a configurable ratio (BENCH_RATIO,
+BENCH_RATIO_WARM); <1 means the numerator is faster.
+
+Targets (the get_problem_data kwargs each column selects):
+  CPP/SCIPY/COO      explicit canon_backend, DPP path -- builds the
+                     parameter->data TENSOR (only worth it across re-solves).
+  CPP_ND/SCIPY_ND/   same backend with ignore_dpp=True: EvalParams bakes the
+  COO_ND             parameters into constants, so the backend builds a plain
+                     non-parametric matrix -- the SAME artefact the diff engine
+                     produces, hence the like-for-like comparison. Upstream
+                     cvxpy only: the fork rejects an explicit backend here.
+  CPP_DEFAULT        no canon_backend at all. NOT the same as CPP: cvxpy
+                     silently switches to COO once total parameter size >=
+                     DPP_PARAM_THRESHOLD (1000). Kept only to replicate
+                     results published before the CPP column was pinned.
+  DIFFENGINE         ignore_dpp=True with no explicit backend (diff-engine fork).
+  DE_DPP             explicit canon_backend=DIFFENGINE on the DPP path.
+  dpp/diffengine/    warm strategies; nodpp_* are the ignore_dpp=True variants,
+  de_cached/dpp_*/   where cvxpy sets uncached_param_prog and every re-solve is
+  nodpp_*            a FULL recompile -- i.e. the cost of not having DPP.
+'dpp?' is is_dpp() as the solving chain evaluates it (quad_form_dpp='qp' for
+solvers that take a quadratic objective), which is what decides the branch --
+not the bare problem.is_dpp() older tables reported.
+
+
+Table 1 -- cold first-compile (s) by canon backend
+benchmark                                        n_vars  dpp?       CPP     SCIPY       COO    CPP_ND  SCIPY_ND    COO_ND CPP_ND/CPP         status
+---------------------------------------------------------------------------------------------------------------------------------------------------
+simple_QP_benchmarks.SimpleQPBenchmark            1,600   yes   16.1650   10.7922   12.1878   11.9308   11.7224   13.2467      0.74x             ok
+simple_QP_benchmarks.UnconstrainedQP                 18   yes   11.4030    8.6436   14.4145   11.6334    9.3237   14.3852      1.02x             ok
+slow_pruning_1668_benchmark.SlowPruningBenchmark      2,000   yes    8.2241    7.8554    8.6555    8.3371    8.0863    8.4999      1.01x             ok
+svm_l1_regularization.SVMWithL1Regularization        501   yes   13.1179    8.5792    9.9883   13.5417    9.3174   10.4068      1.03x             ok
+tv_inpainting.TvInpainting                      786,432   yes    4.3016    3.9199    3.9697    4.2870    3.8852    3.9679      1.00x             ok
+
+Table 2 -- re-compile (s) with changing parameters (parametric problems only)
+benchmark                                        n_vars         dpp     dpp_coo   dpp_scipy   nodpp_cpp nodpp_scipy   nodpp_coo nodpp_cpp vs dpp
+------------------------------------------------------------------------------------------------------------------------------------------------
+svm_l1_regularization.SVMWithL1Regularization        501      0.2922      0.2547      0.2564     11.7479      8.9174     11.5109           40.21x

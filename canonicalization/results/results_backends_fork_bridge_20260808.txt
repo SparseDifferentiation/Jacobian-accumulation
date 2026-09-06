@@ -1,0 +1,149 @@
+Diff-engine fork: pinned-CPP bridge run (companion to the upstream 1.9.2 sweep)
+==============================================================================
+Date:    2026-08-08
+Machine: MacBook Pro (15-inch, 2018), 6-core Intel i7-8850H @ 2.60GHz, 16 GB,
+         macOS 15.7.7. BLAS pinned to 1 thread.
+Env:     .venv -- cvxpy 0.1.0.dev3996+gca08a26d1 (Transurgeon fork,
+         pr-c-resolve-caching), sparsediffpy 0.7.0 LOCAL DEV BUILD (commit
+         9db427c), Python 3.14, numpy 2.4.6, scipy 1.17.1.
+         Engine version was asserted before the run: PyPI 0.6.0 would have
+         invalidated every warm re-solve.
+
+Purpose
+-------
+1. VERSION BRIDGE. The *_ND (ignore_dpp) columns can only be measured on stock
+   upstream cvxpy, so comparing them against this fork's DIFFENGINE column is a
+   cross-version comparison. This run measures CPP/SCIPY/COO on the DPP path
+   here, so the fork-vs-upstream offset is known. Result: the fork is
+   consistently 1.03x-1.21x SLOWER for the same backend on the same problem
+   (Cajas 1.11, Murray 1.17, Yitzhaki 1.19, CVaR 1.08, ParamCone 1.03,
+   ParamSmall 1.04). The offset is systematic and small relative to the effects
+   being reported, so the cross-version comparison is sound -- and conservative,
+   since it works against the engine.
+2. The CPP_DEFAULT column, which passes NO canon_backend, reproducing what the
+   older published tables actually measured.
+
+The CPP mislabelling, demonstrated
+----------------------------------
+With no canon_backend, cvxpy silently substitutes COO once total parameter size
+reaches DPP_PARAM_THRESHOLD (1000). On the parametric problems CPP_DEFAULT
+tracks COO, not CPP:
+    ParamConeMatrixStuffing   CPP_DEFAULT 0.2718  COO 0.2842  CPP 3.3539
+    ParamSmallMatrixStuffing  CPP_DEFAULT 0.4182  COO 0.4247  CPP 8.1883
+and the old published cells (results_backends_all_20260724_repl.txt) were
+0.2876 and 0.4466 -- i.e. COO. True pinned CPP is 12-18x larger. On the
+parameter-free problems CPP_DEFAULT == CPP as expected (Cajas 22.66 vs 22.67).
+
+ConvexPlasticity: stock cvxcore is UNMEASURABLE on this fork
+------------------------------------------------------------
+The problem is not DPP under the chain's predicate, so an explicit canon_backend
+raises ValueError -- CPP, SCIPY and COO all ERR. Only DIFFENGINE (2.0221),
+DE_DPP (2.0523) and CPP_DEFAULT (2.0531) return, and CPP_DEFAULT == DIFFENGINE
+because passing no backend force-routes to the engine. The old table's
+"CPP 2.1382" baseline for this row was therefore the diff engine compared
+against itself. Stock upstream cvxcore does the same extraction in 0.3586 s,
+i.e. the engine is ~5.6x SLOWER here (~4.7x after the version offset). Cause is
+already known and now quantified: the engine emits P with 9,048,000 stored
+entries for a true nnz of 33,000 (274x zero padding); upstream emits exactly
+33,000.
+
+Gaps
+----
+* ParametrizedQPBenchmark: skipped via BENCH_SKIP (killed the upstream run).
+* SimpleFullyParametrizedLPBenchmark: crashed/killed under pinned CPP here too,
+  no Python exception -- the same cross-version failure described in the
+  upstream file.
+
+Command
+-------
+OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 \
+BENCH_TIMEOUT=2400 BENCH_SKIP=ParametrizedQPBenchmark \
+BENCH_BACKENDS=CPP,SCIPY,COO,DIFFENGINE,DE_DPP,CPP_DEFAULT \
+BENCH_STRATEGIES=dpp,dpp_coo,dpp_scipy,diffengine,de_cached \
+BENCH_RATIO=DIFFENGINE/CPP BENCH_RATIO_WARM=de_cached/dpp \
+.venv/bin/python canonicalization/run_backend_benchmarks.py
+
+Upstream cvxpy/benchmarks suite: canonicalization backends + ignore_dpp
+=======================================================================
+Source:  https://github.com/cvxpy/benchmarks (cloned, run as is)
+cvxpy:   0.1.0.dev3996+gca08a26d1   python: 3.14.4   platform: darwin
+timeout: 2400s/problem   solver=CLARABEL (uniform, for comparability)
+backends: CPP,SCIPY,COO,DIFFENGINE,DE_DPP,CPP_DEFAULT
+strategies: dpp,dpp_coo,dpp_scipy,diffengine,de_cached
+
+Table 1 = COLD first-compile time (s) of each problem under each canon backend
+  (fresh setup + get_problem_data per backend, since the chain cache key
+  excludes canon_backend).
+Table 2 = re-compile time (s) with changing parameters (parametric problems
+  only), mean of 3, fresh instance per strategy.
+The last column of each table is a configurable ratio (BENCH_RATIO,
+BENCH_RATIO_WARM); <1 means the numerator is faster.
+
+Targets (the get_problem_data kwargs each column selects):
+  CPP/SCIPY/COO      explicit canon_backend, DPP path -- builds the
+                     parameter->data TENSOR (only worth it across re-solves).
+  CPP_ND/SCIPY_ND/   same backend with ignore_dpp=True: EvalParams bakes the
+  COO_ND             parameters into constants, so the backend builds a plain
+                     non-parametric matrix -- the SAME artefact the diff engine
+                     produces, hence the like-for-like comparison. Upstream
+                     cvxpy only: the fork rejects an explicit backend here.
+  CPP_DEFAULT        no canon_backend at all. NOT the same as CPP: cvxpy
+                     silently switches to COO once total parameter size >=
+                     DPP_PARAM_THRESHOLD (1000). Kept only to replicate
+                     results published before the CPP column was pinned.
+  DIFFENGINE         ignore_dpp=True with no explicit backend (diff-engine fork).
+  DE_DPP             explicit canon_backend=DIFFENGINE on the DPP path.
+  dpp/diffengine/    warm strategies; nodpp_* are the ignore_dpp=True variants,
+  de_cached/dpp_*/   where cvxpy sets uncached_param_prog and every re-solve is
+  nodpp_*            a FULL recompile -- i.e. the cost of not having DPP.
+'dpp?' is is_dpp() as the solving chain evaluates it (quad_form_dpp='qp' for
+solvers that take a quadratic objective), which is what decides the branch --
+not the bare problem.is_dpp() older tables reported.
+
+
+Table 1 -- cold first-compile (s) by canon backend
+benchmark                                        n_vars  dpp?         CPP       SCIPY         COO     DIFFENG      DE_DPP CPP_DEFAULT DIFFENG/CPP         status
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+finance.CVaRBenchmark                               769   yes     35.8538     24.7945     26.8641     24.9362     25.1635     41.4609       0.70x             ok
+finance.FactorCovarianceModel                    25,250   yes      7.4931      4.9475      5.5324      0.9633      0.8969      5.8904       0.13x             ok
+gini_portfolio.Cajas                              2,450   yes     22.6679      2.9121      2.8940      1.0684      1.0987     22.6588       0.05x             ok
+gini_portfolio.Murray                           245,400   yes      7.1260      3.8721      4.0018      3.7186      3.7284      7.1951       0.52x             ok
+gini_portfolio.Yitzhaki                          44,900   yes      3.5578      3.2828      3.5491      0.5105      0.5059      3.6273       0.14x             ok
+high_dim_convex_plasticity.ConvexPlasticity      15,000    no ERR:ValueError ERR:ValueError ERR:ValueError      2.0221      2.0523      2.0531           -             ok
+huber_regression.HuberRegression                  3,000   yes     12.0532     10.7242     11.5962      1.7343      1.6678     11.8881       0.14x             ok
+matrix_stuffing.ConeMatrixStuffingBench           5,000   yes     11.0630      9.3352     16.9931      3.9471      4.0761     10.7555       0.36x             ok
+matrix_stuffing.ParamConeMatrixStuffing             200   yes      3.3539      7.5029      0.2842      0.1374      0.1218      0.2718       0.04x             ok
+matrix_stuffing.ParamSmallMatrixStuffing            300   yes      8.1883     28.0049      0.4247      0.2045      0.1917      0.4182       0.02x             ok
+matrix_stuffing.SmallMatrixStuffing               4,000   yes      6.9685      7.0851     10.8427      2.7568      2.7498      6.7757       0.40x             ok
+optimal_advertising.OptimalAdvertising          250,000   yes      6.4346      2.3159      2.2476      2.3565      2.3061      6.7907       0.37x             ok
+quantum_hilbert_matrix.QuantumHilbertMatrix       4,096   yes      4.2715      4.0529      4.7496      1.6666      1.6919      4.3477       0.39x             ok
+sdp_segfault_1132_benchmark.SDPSegfault1132Benchmark      9,801   yes     64.8368      9.5136     42.9953     13.2076     19.6590     72.8141       0.20x             ok
+semidefinite_programming.SemidefiniteProgramming     40,000   yes      5.9591      2.4346      3.7842      2.0150      2.0237      5.9541       0.34x             ok
+simple_LP_benchmarks.SimpleFullyParametrizedLPBenchmark          -     -           -           -           -           -           -           -           - crashed/killed
+simple_LP_benchmarks.SimpleLPBenchmark       10,000,000   yes     37.5731     29.9934     30.9563      6.1192      7.0505     33.9380       0.16x             ok
+simple_LP_benchmarks.SimpleScalarParametrizedLPBenchmark  2,000,000   yes      5.4711      5.1596      5.1740      0.9922      0.9960      5.2897       0.18x             ok
+simple_QP_benchmarks.LeastSquares                 2,000   yes      9.6139     10.0819     10.6847      1.4500      1.4462      9.7420       0.15x             ok
+simple_QP_benchmarks.ParametrizedQPBenchmark          -     -           -           -           -           -           -           -           - skipped (too large)
+simple_QP_benchmarks.SimpleQPBenchmark            1,600   yes     11.2663     10.5855     11.9696      1.8742      1.8300     11.5543       0.17x             ok
+simple_QP_benchmarks.UnconstrainedQP                 18   yes     10.3242      8.5185     13.5354      0.0706      0.0585     10.6444       0.01x             ok
+slow_pruning_1668_benchmark.SlowPruningBenchmark      2,000   yes      7.6900      7.8227      8.6035      3.0079      3.0694      7.7750       0.39x             ok
+svm_l1_regularization.SVMWithL1Regularization        501   yes     12.7590      9.3729     10.8724      1.6829      1.6462     12.5418       0.13x             ok
+tv_inpainting.TvInpainting                      786,432   yes      3.8925      3.5039      3.5662      1.2014      1.2201      3.8717       0.31x             ok
+
+Table 2 -- re-compile (s) with changing parameters (parametric problems only)
+benchmark                                        n_vars        dpp    dpp_coo  dpp_scipy    diffeng  de_cached de_cached vs dpp
+-------------------------------------------------------------------------------------------------------------------------------
+finance.FactorCovarianceModel                    25,250     0.1641     0.1617     0.1622     0.3359     0.3211            1.96x
+high_dim_convex_plasticity.ConvexPlasticity      15,000     0.6612        ERR        ERR     0.7735        ERR                -
+matrix_stuffing.ParamConeMatrixStuffing             200     0.0033     0.0031     0.0032     0.0009     0.0010            0.32x
+matrix_stuffing.ParamSmallMatrixStuffing            300     0.0055     0.0054     0.0055     0.0021     0.0023            0.42x
+simple_LP_benchmarks.SimpleScalarParametrizedLPBenchmark  2,000,000     0.3760     0.3752     0.3679     0.3067     0.2944            0.78x
+svm_l1_regularization.SVMWithL1Regularization        501     0.2944     0.3134     0.3220     0.6108     0.6199            2.11x
+
+Errors:
+  cold high_dim_convex_plasticity.ConvexPlasticity [CPP]: ERR:ValueError
+  cold high_dim_convex_plasticity.ConvexPlasticity [SCIPY]: ERR:ValueError
+  cold high_dim_convex_plasticity.ConvexPlasticity [COO]: ERR:ValueError
+  recompile high_dim_convex_plasticity.ConvexPlasticity [dpp_coo]: ValueError: not DPP: dpp_coo needs the DPP path
+  recompile high_dim_convex_plasticity.ConvexPlasticity [dpp_scipy]: ValueError: not DPP: dpp_scipy needs the DPP path
+  recompile high_dim_convex_plasticity.ConvexPlasticity [de_cached]: ValueError: not DPP: de_cached needs the DPP path

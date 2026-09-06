@@ -1,0 +1,60 @@
+[
+ {
+  "module": "simple_LP_benchmarks",
+  "class": "SimpleFullyParametrizedLPBenchmark",
+  "cold": {
+   "DIFFENGINE": 0.5430040429346263,
+   "DE_DPP": 0.5412144720321521
+  },
+  "n_vars": 1000000,
+  "n_params": 1,
+  "sense": "Minimize",
+  "is_dpp": true,
+  "is_dpp_plain": true,
+  "comparison": {
+   "diffengine": {
+    "mean_s": 0.1255774910096079,
+    "std_s": 0.004932310622462547
+   },
+   "de_cached": {
+    "mean_s": 0.12753285192108402,
+    "std_s": 0.009610636465994965
+   },
+   "dpp": {
+    "mean_s": 0.23509948165155947,
+    "std_s": 0.01369145972062534
+   }
+  },
+  "done": true,
+  "status": "ok"
+ },
+ {
+  "module": "simple_QP_benchmarks",
+  "class": "ParametrizedQPBenchmark",
+  "cold": {
+   "DIFFENGINE": 2.5303257779451087,
+   "DE_DPP": 2.538294797996059
+  },
+  "n_vars": 2400,
+  "n_params": 2,
+  "sense": "Minimize",
+  "is_dpp": true,
+  "is_dpp_plain": true,
+  "comparison": {
+   "diffengine": {
+    "mean_s": 0.9852986260084435,
+    "std_s": 0.009526677694755485
+   },
+   "de_cached": {
+    "mean_s": 0.9745459389717629,
+    "std_s": 0.007462559601768674
+   },
+   "dpp": {
+    "mean_s": 1.3906323120075588,
+    "std_s": 0.037932659470799934
+   }
+  },
+  "done": true,
+  "status": "ok"
+ }
+]

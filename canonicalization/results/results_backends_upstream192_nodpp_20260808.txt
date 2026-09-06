@@ -1,0 +1,73 @@
+Upstream cvxpy/benchmarks suite: canonicalization backends + ignore_dpp
+=======================================================================
+Source:  https://github.com/cvxpy/benchmarks (cloned, run as is)
+cvxpy:   1.9.2   python: 3.14.4   platform: darwin
+timeout: 2400s/problem   solver=CLARABEL (uniform, for comparability)
+backends: CPP,SCIPY,COO,CPP_ND,SCIPY_ND,COO_ND
+strategies: dpp,dpp_coo,dpp_scipy,nodpp_cpp,nodpp_scipy,nodpp_coo
+
+Table 1 = COLD first-compile time (s) of each problem under each canon backend
+  (fresh setup + get_problem_data per backend, since the chain cache key
+  excludes canon_backend).
+Table 2 = re-compile time (s) with changing parameters (parametric problems
+  only), mean of 3, fresh instance per strategy.
+The last column of each table is a configurable ratio (BENCH_RATIO,
+BENCH_RATIO_WARM); <1 means the numerator is faster.
+
+Targets (the get_problem_data kwargs each column selects):
+  CPP/SCIPY/COO      explicit canon_backend, DPP path -- builds the
+                     parameter->data TENSOR (only worth it across re-solves).
+  CPP_ND/SCIPY_ND/   same backend with ignore_dpp=True: EvalParams bakes the
+  COO_ND             parameters into constants, so the backend builds a plain
+                     non-parametric matrix -- the SAME artefact the diff engine
+                     produces, hence the like-for-like comparison. Upstream
+                     cvxpy only: the fork rejects an explicit backend here.
+  CPP_DEFAULT        no canon_backend at all. NOT the same as CPP: cvxpy
+                     silently switches to COO once total parameter size >=
+                     DPP_PARAM_THRESHOLD (1000). Kept only to replicate
+                     results published before the CPP column was pinned.
+  DIFFENGINE         ignore_dpp=True with no explicit backend (diff-engine fork).
+  DE_DPP             explicit canon_backend=DIFFENGINE on the DPP path.
+  dpp/diffengine/    warm strategies; nodpp_* are the ignore_dpp=True variants,
+  de_cached/dpp_*/   where cvxpy sets uncached_param_prog and every re-solve is
+  nodpp_*            a FULL recompile -- i.e. the cost of not having DPP.
+'dpp?' is is_dpp() as the solving chain evaluates it (quad_form_dpp='qp' for
+solvers that take a quadratic objective), which is what decides the branch --
+not the bare problem.is_dpp() older tables reported.
+
+
+Table 1 -- cold first-compile (s) by canon backend
+benchmark                                        n_vars  dpp?       CPP     SCIPY       COO    CPP_ND  SCIPY_ND    COO_ND CPP_ND/CPP         status
+---------------------------------------------------------------------------------------------------------------------------------------------------
+finance.CVaRBenchmark                               769   yes   33.2022   23.1181   26.2525   39.0462   24.9599   26.7634      1.18x             ok
+finance.FactorCovarianceModel                    25,250   yes    5.4859    4.6515    4.7621    5.4292    4.5145    4.8237      0.99x             ok
+gini_portfolio.Cajas                              2,450   yes   20.4314    2.6568    2.6121   19.3917    2.6684    2.6048      0.95x             ok
+gini_portfolio.Murray                           245,400   yes    6.0753    3.6005    3.7001    6.7433    3.6213    3.7220      1.11x             ok
+gini_portfolio.Yitzhaki                          44,900   yes    2.9956    2.7621    2.9409    2.9796    2.7987    2.9980      0.99x             ok
+high_dim_convex_plasticity.ConvexPlasticity      15,000    no    0.3586    0.3681    0.3530    0.3557    0.3661    0.3490      0.99x             ok
+huber_regression.HuberRegression                  3,000   yes   10.6040    9.6036   10.4108   10.7717    9.5873   10.3994      1.02x             ok
+matrix_stuffing.ConeMatrixStuffingBench           5,000   yes   10.4416    8.8175   15.4244   10.4257    8.8483   15.5454      1.00x             ok
+matrix_stuffing.ParamConeMatrixStuffing             200   yes    3.2476    7.7099    0.2680    0.1827    0.3257    0.3330      0.06x             ok
+matrix_stuffing.ParamSmallMatrixStuffing            300   yes    7.8955   29.3030    0.4107    0.2850    0.4865    0.5012      0.04x             ok
+matrix_stuffing.SmallMatrixStuffing               4,000   yes    6.5515    6.6220   10.0180    6.4066    6.8492    9.6532      0.98x             ok
+optimal_advertising.OptimalAdvertising          250,000   yes    5.9039    2.0584    1.8752    5.7865    2.0910    1.8827      0.98x             ok
+quantum_hilbert_matrix.QuantumHilbertMatrix       4,096   yes    3.8909    3.6739    4.3749    3.9069    3.6661    4.3989      1.00x             ok
+sdp_segfault_1132_benchmark.SDPSegfault1132Benchmark      9,801   yes   59.8054    8.5946   42.2011   56.5403    8.2563   38.3832      0.95x             ok
+semidefinite_programming.SemidefiniteProgramming     40,000   yes    5.2945    2.1187    3.2935    5.2916    2.2021    3.3114      1.00x             ok
+simple_LP_benchmarks.SimpleFullyParametrizedLPBenchmark          -     -         -         -         -         -         -         -          - crashed/killed
+simple_LP_benchmarks.SimpleLPBenchmark       10,000,000   yes   29.9445   26.5229   26.3998   30.9998   28.4241   30.0229      1.04x             ok
+simple_LP_benchmarks.SimpleScalarParametrizedLPBenchmark  2,000,000   yes    5.3469    4.7653    5.2738    5.1476    4.7156    4.7584      0.96x             ok
+simple_QP_benchmarks.LeastSquares                 2,000   yes    9.9285    9.9722   10.6251    9.7960    9.8242   11.0398      0.99x             ok
+
+Table 2 -- re-compile (s) with changing parameters (parametric problems only)
+benchmark                                        n_vars         dpp     dpp_coo   dpp_scipy   nodpp_cpp nodpp_scipy   nodpp_coo nodpp_cpp vs dpp
+------------------------------------------------------------------------------------------------------------------------------------------------
+finance.FactorCovarianceModel                    25,250      0.1448      0.1453      0.1409      5.5317      4.3383      4.6423           38.19x
+high_dim_convex_plasticity.ConvexPlasticity      15,000      0.1320         ERR         ERR      0.1326      0.1358      0.1315            1.00x
+matrix_stuffing.ParamConeMatrixStuffing             200      0.0028      0.0029      0.0029      0.1651      0.2997      0.3037           58.55x
+matrix_stuffing.ParamSmallMatrixStuffing            300      0.0048      0.0049      0.0049      0.2387      0.4532      0.4656           49.70x
+simple_LP_benchmarks.SimpleScalarParametrizedLPBenchmark  2,000,000      0.4834      0.3954      0.4047      5.5649      4.7464      4.6792           11.51x
+
+Errors:
+  recompile high_dim_convex_plasticity.ConvexPlasticity [dpp_coo]: ValueError: not DPP: dpp_coo needs the DPP path
+  recompile high_dim_convex_plasticity.ConvexPlasticity [dpp_scipy]: ValueError: not DPP: dpp_scipy needs the DPP path
