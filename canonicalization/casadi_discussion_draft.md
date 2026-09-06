@@ -2,7 +2,9 @@
 
 Post the section below verbatim; fill in the repo link. The broadcast
 value-bug (see CVaR builder) is deliberately NOT mixed in here — file it as a
-separate issue with its own minimal repro.
+separate issue with its own minimal repro. Same for the `separate_linear`
+Call-node assertion crash (casadi_issue_draft_separate_linear_call_crash.md);
+this post only cites `separate_linear`'s behavior on graphs where it works.
 
 ---
 
@@ -86,6 +88,18 @@ system — the cost is all in the one-time Jacobian construction.
   route we could find.
 - **SX:** same sweep counts, ~nnz scalar nodes per matrix op; 50–270× slower
   than MX on these graphs and cannot reach the benchmark sizes.
+- **`separate_linear` (#3639):** we found the structural path and it is
+  impressively cheap — the per-node `eval_linear` classification splits a
+  dense 2000×1000 affine constraint into (constant, linear, nonlinear) parts
+  in ~0.4 ms, and correctly keeps parameter-scaled terms like `theta*x` in
+  the linear part. But it does not change extraction cost: `jacobian()` on
+  the separated linear part takes the same time as on the original
+  expression (2.53 s vs 2.62 s on that block). Even though the linear part
+  comes back as `mac(A, x, 0)` with `A` a constant node one `dep()` away,
+  the only route from there to `A`-as-data is still coloring + one sweep
+  per color. We also note `qpsol_nlp` does not call `separate_linear`, and
+  node coverage is partial (`solve(A, x)` and `bilin` classify as wholly
+  nonlinear).
 
 ## Questions
 
@@ -95,8 +109,15 @@ system — the cost is all in the one-time Jacobian construction.
    `GlobalOptions`, …) that materially changes the dense-block case?
 2. Is one-sweep-per-color on dense *constant* blocks the expected behavior,
    i.e. there is deliberately no shortcut that reads the coefficient block of
-   an affine subgraph directly off the constant node? (We understand the
-   design center is repeated evaluation inside NLP solvers, where this
+   an affine subgraph directly off the constant node? We ask because the
+   structural half already exists: `eval_linear`/`separate_linear` (#3639)
+   *prove* linearity per node, cheaply and correctly (including
+   parameter-scaled coefficients) — but the result is only ever a
+   classification; materializing the coefficients still goes through the
+   seeded-sweep machinery. Was completing that path into a materialization
+   step (assembling the coefficient matrix per node instead of seeding
+   sweeps) considered, or is it on a roadmap? (We understand the design
+   center is repeated evaluation inside NLP solvers, where the one-time
    construction cost is amortized — we want to state that fairly.)
 3. Is the star-coloring blowup of `hessian()` on dense Hessian patterns
    (n = 800: 148 s vs 5.4 s via jacobian-of-gradient; n = 1600 did not finish

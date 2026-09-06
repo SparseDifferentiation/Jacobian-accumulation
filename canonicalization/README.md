@@ -66,11 +66,71 @@ OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREAD
 OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 \
   BENCH_TIMEOUT=1200 BENCH_BACKENDS=CPP,DIFFENGINE,DE_DPP \
   python canonicalization/run_backend_benchmarks.py
+
+# Stock backends on the ignore_dpp path (upstream cvxpy only -- see below)
+OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1 VECLIB_MAXIMUM_THREADS=1 \
+  BENCH_TIMEOUT=600 \
+  BENCH_BACKENDS=CPP,SCIPY,COO,CPP_ND,SCIPY_ND,COO_ND,CPP_DEFAULT \
+  BENCH_STRATEGIES=dpp,dpp_coo,dpp_scipy,nodpp_cpp,nodpp_scipy,nodpp_coo \
+  BENCH_RATIO=CPP_ND/CPP BENCH_RATIO_WARM=nodpp_cpp/dpp \
+  canonicalization/.venv-upstream/bin/python canonicalization/run_backend_benchmarks.py
+
+# Memory comparison (peak-RSS delta per backend/strategy, one subprocess per
+# measurement; also reads the diff engine's own allocation counters). Not
+# timing-sensitive, no BLAS pinning needed.
+BENCH_MEMORY=1 python canonicalization/run_backend_benchmarks.py
 ```
 
 Knobs: `--only Name1,Name2` restricts problems; `CASADI_ITERS`/`CASADI_RESOLVES` and
 `BENCH_ITERS`/`BENCH_ONLY`/`BENCH_OUT` control repetition and output. Pin BLAS to one
 thread (as above) for comparable numbers.
+
+### `ignore_dpp` fairness: the `*_ND` targets and the upstream env
+
+The default backend table is not a like-for-like comparison. On the DPP path
+`CPP`/`SCIPY`/`COO` build a **parameter → data tensor** (strictly more work, and
+it only pays off across re-solves), while the diff-engine columns run with
+`ignore_dpp=True` and produce concrete `(P, c, A, b)` for one parameter value.
+Comparing a tensor build against a tree evaluation flatters whichever side is
+doing less work.
+
+The `*_ND` cold targets (and `nodpp_*` warm strategies) fix this: same backend,
+`ignore_dpp=True`, so `EvalParams` bakes the parameters into constants and the
+backend builds a plain non-parametric matrix — the same artefact the engine
+produces. **They only run on upstream cvxpy.** The diff-engine fork raises
+`ValueError` for an explicit `canon_backend` on the `ignore_dpp` path
+(`solving_chain.py`: parametrized ≤2-D problems are force-routed to
+`DIFFENGINE`), so a second, isolated environment is required:
+
+```bash
+uv venv canonicalization/.venv-upstream --python 3.14
+uv pip install --python canonicalization/.venv-upstream/bin/python cvxpy==1.9.2 numpy scipy
+```
+
+It must be isolated: cvxpy 1.9.2 pins `sparsediffpy<0.4.0`, which would clobber
+the local 0.7.0 dev build in `.venv`. Upstream's backends are `CPP`, `SCIPY`,
+`COO` (there is no `NUMPY` backend; `RUST` needs a separate package).
+
+Two related corrections landed with these targets:
+
+- **`CPP` is now pinned** with an explicit `canon_backend="CPP"`. Passing nothing
+  lets cvxpy switch silently to `COO` once total parameter size reaches
+  `DPP_PARAM_THRESHOLD` (1000), which made the `CPP` and `COO` columns the same
+  code on 4 of the 8 parametric problems in
+  `results/results_backends_all_20260724_repl.txt`. The gap is large: on
+  `ParamConeMatrixStuffing`, true `CPP` is 3.31 s where the unpinned column read
+  0.27 s. `CPP_DEFAULT` reproduces the old behaviour when a published table
+  needs replicating.
+- **The `dpp?` column now uses the chain's predicate**,
+  `is_dpp('dcp', quad_form_dpp='qp')`, rather than the bare `problem.is_dpp()`.
+  They disagree on `ConvexPlasticity`, which older tables reported as DPP even
+  though the chain sends it down the non-DPP branch — so that row's "CPP
+  baseline" was itself the diff engine.
+
+Artefact equivalence (the thing that makes the timings comparable at all) is
+checked by `verify_nodpp_equivalence.py`, which dumps `(P, c, A, b)` from each
+interpreter and compares them with the same `_sparse_close` MATCH discipline
+`casadi_compare.py` uses.
 
 **Engine version caveat**: all timing runs need `sparsediffpy` ≥ 0.6.1. PyPI
 0.6.0 lacks the composite `param_source` refresh fix

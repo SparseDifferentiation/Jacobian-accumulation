@@ -1,4 +1,6 @@
 .venv/
+# isolated upstream-cvxpy env for the ignore_dpp backend sweep (see README)
+canonicalization/.venv-upstream/
 __pycache__/
 *.pyc
 .DS_Store
@@ -8,6 +10,7 @@ canonicalization/cvxpy_benchmarks/
 
 # transient benchmark outputs (reference results live in canonicalization/results/)
 canonicalization/_worker_result.json
+canonicalization/_worker_stderr.log
 canonicalization/results_*.txt
 canonicalization/results_*.json
 canonicalization/probes/_*.log

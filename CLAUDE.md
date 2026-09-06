@@ -42,6 +42,13 @@ Jacobian accumulation cost compared to knowing the derivative structure per atom
   `uv pip install --python .venv/bin/python --force-reinstall --no-deps <path-to-SparseDiffPy>`.
 - The backend runner needs `git clone --depth 1 https://github.com/cvxpy/benchmarks
   canonicalization/cvxpy_benchmarks` (gitignored).
+- The `*_ND` / `nodpp_*` (ignore_dpp) backend targets need a SECOND, isolated env
+  with stock upstream cvxpy: `uv venv canonicalization/.venv-upstream --python 3.14`
+  then `uv pip install --python canonicalization/.venv-upstream/bin/python
+  cvxpy==1.9.2 numpy scipy` (gitignored). It cannot share `.venv`: cvxpy 1.9.2 pins
+  `sparsediffpy<0.4.0`. The fork rejects an explicit `canon_backend` on the
+  `ignore_dpp` path, which is why the sweep needs upstream at all — see the
+  "`ignore_dpp` fairness" section of `canonicalization/README.md`.
 - Julia comparisons: juliaup Julia + `julia --project=julia -e 'using Pkg;
   Pkg.instantiate()'` (Project/Manifest checked in under `julia/`). Workers are
   invoked with `--project=julia --threads=1`.
