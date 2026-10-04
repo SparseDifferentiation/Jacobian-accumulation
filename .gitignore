@@ -22,3 +22,5 @@ canonicalization/.ref_cache/
 jacobian/ADOL-C/
 jacobian/*.o
 jacobian/sparse_jacobian
+canonicalization/.venv-thesis/
+canonicalization/_thesis_worker*
