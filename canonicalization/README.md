@@ -517,3 +517,45 @@ values via the opt-in `--verify`, the only mode that actually solves. See
 
 This folder backs chapter 4 of the associated master's thesis and the benchmark tables
 of [cvxpy#3348](https://github.com/cvxpy/cvxpy/pull/3348).
+
+## Final-deposit experiments of the thesis (October 2026)
+
+The jury and the examiner asked for replicates and p-values, an ablation of the two
+contributions, non-DPP problems, sensitivity to size and density, instance dimensions,
+a phase breakdown, and a stated correctness check. All of it is produced by:
+
+- `thesis_final_benchmarks.py`: the runner (timing, memory and correctness modes).
+  It reuses the helpers of `run_backend_benchmarks.py`. Each replicate runs in a fresh
+  subprocess, with up to `BENCH_REPS=20` samples per measurement, or 5 when the first
+  sample exceeds 30 s. Every output file records the machine, the versions and the
+  engine's BLAS.
+- `thesis_extra_problems.py`: families beyond the suite. These are the
+  DPP / non-DPP / parameter-free variants (`lasso`, `factor_cov`) and scalable copies of
+  HuberRegression, OptimalAdvertising and FactorCovarianceModel, all with seeds.
+- `thesis_stats.py`: the summary. It reports mean ± std, Mann–Whitney U per problem
+  with Holm correction, a Wilcoxon signed-rank test over problems, bootstrap CIs of the
+  geometric mean, ablation contrasts and phase shares.
+- `run_thesis_final.sh`: the whole sweep, writing into `results/thesis/`.
+
+The ablation switches and the phase timers live in the CVXPY fork, on branch
+`Transurgeon/cvxpy@thesis-ablation` (based on `b7bb765`, PR #3449):
+
+| variable | effect |
+|---|---|
+| `DIFFENGINE_NO_DENSE=1` | constant matrices go to the sparse CSR bindings, so no permuted dense blocks are built from constant data |
+| `DIFFENGINE_REBUILD=1` | conversion and symbolic pass repeated on every parameter update (no symbolic/numeric split) |
+| `DIFFENGINE_PROFILE=1` | per-phase times in `extractor.PHASE_TIMES` |
+
+Environments (both gitignored):
+
+```bash
+uv venv canonicalization/.venv-thesis --python 3.13
+uv pip install --python canonicalization/.venv-thesis/bin/python \
+  numpy==2.5.3 scipy==1.18.1 clarabel==0.11.1 threadpoolctl
+# SparseDiffPy checkout whose SparseDiffEngine submodule is at 64f7432 (#125 merged)
+uv pip install --python canonicalization/.venv-thesis/bin/python --no-deps <SparseDiffPy>
+uv pip install --python canonicalization/.venv-thesis/bin/python -e <cvxpy@thesis-ablation>
+uv venv canonicalization/.venv-upstream --python 3.13
+uv pip install --python canonicalization/.venv-upstream/bin/python \
+  cvxpy==1.9.2 numpy==2.5.3 scipy==1.18.1 clarabel==0.11.1 threadpoolctl
+```

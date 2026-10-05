@@ -25,6 +25,8 @@ canonicalization/.ref_cache/
 jacobian/ADOL-C/
 jacobian/*.o
 jacobian/sparse_jacobian
+canonicalization/.venv-thesis/
+canonicalization/_thesis_worker*
 
 # local third-party ADOL-C clone + build used by the jacobian/ minis
 adol-c/
