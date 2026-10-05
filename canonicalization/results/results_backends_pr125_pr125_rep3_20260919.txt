@@ -1,0 +1,64 @@
+Upstream cvxpy/benchmarks suite: canonicalization backends + ignore_dpp
+=======================================================================
+Source:  https://github.com/cvxpy/benchmarks (cloned, run as is)
+cvxpy:   0.1.0.dev4043+gb7bb76591   python: 3.13.5   platform: darwin
+timeout: 900s/problem   solver=CLARABEL (uniform, for comparability)
+backends: DE_DPP
+strategies: dpp,dpp_coo,dpp_scipy,diffengine,de_cached
+
+Table 1 = COLD first-compile time (s) of each problem under each canon backend
+  (fresh setup + get_problem_data per backend, since the chain cache key
+  excludes canon_backend).
+Table 2 = re-compile time (s) with changing parameters (parametric problems
+  only), mean of 15, fresh instance per strategy.
+The last column of each table is a configurable ratio (BENCH_RATIO,
+BENCH_RATIO_WARM); <1 means the numerator is faster.
+
+Targets (the get_problem_data kwargs each column selects):
+  CPP/SCIPY/COO      explicit canon_backend, DPP path -- builds the
+                     parameter->data TENSOR (only worth it across re-solves).
+  CPP_ND/SCIPY_ND/   same backend with ignore_dpp=True: EvalParams bakes the
+  COO_ND             parameters into constants, so the backend builds a plain
+                     non-parametric matrix -- the SAME artefact the diff engine
+                     produces, hence the like-for-like comparison. Upstream
+                     cvxpy only: the fork rejects an explicit backend here.
+  CPP_DEFAULT        no canon_backend at all. NOT the same as CPP: cvxpy
+                     silently switches to COO once total parameter size >=
+                     DPP_PARAM_THRESHOLD (1000). Kept only to replicate
+                     results published before the CPP column was pinned.
+  DIFFENGINE         ignore_dpp=True with no explicit backend (diff-engine fork).
+  DE_DPP             explicit canon_backend=DIFFENGINE on the DPP path.
+  dpp/diffengine/    warm strategies; nodpp_* are the ignore_dpp=True variants,
+  de_cached/dpp_*/   where cvxpy sets uncached_param_prog and every re-solve is
+  nodpp_*            a FULL recompile -- i.e. the cost of not having DPP.
+'dpp?' is is_dpp() as the solving chain evaluates it (quad_form_dpp='qp' for
+solvers that take a quadratic objective), which is what decides the branch --
+not the bare problem.is_dpp() older tables reported.
+
+
+Table 1 -- cold first-compile (s) by canon backend
+benchmark                                        n_vars  dpp?    DE_DPP DIFFENG/CPP         status
+--------------------------------------------------------------------------------------------------
+finance.FactorCovarianceModel                    25,250   yes    0.1700           -             ok
+high_dim_convex_plasticity.ConvexPlasticity      15,000    no    0.5058           -             ok
+matrix_stuffing.ParamConeMatrixStuffing             200   yes    0.0298           -             ok
+matrix_stuffing.ParamSmallMatrixStuffing            300   yes    0.0427           -             ok
+simple_LP_benchmarks.SimpleScalarParametrizedLPBenchmark  2,000,000   yes    0.2266           -             ok
+svm_l1_regularization.SVMWithL1Regularization        501   yes    0.3860           -             ok
+
+Table 2 -- re-compile (s) with changing parameters (parametric problems only)
+benchmark                                        n_vars        dpp    dpp_coo  dpp_scipy    diffeng  de_cached de_cached vs dpp
+-------------------------------------------------------------------------------------------------------------------------------
+finance.FactorCovarianceModel                    25,250     0.0209     0.0208     0.0213     0.0826     0.0810            3.88x
+high_dim_convex_plasticity.ConvexPlasticity      15,000     0.2057        ERR        ERR     0.2052        ERR                -
+matrix_stuffing.ParamConeMatrixStuffing             200     0.0010     0.0010     0.0010     0.0003     0.0003            0.30x
+matrix_stuffing.ParamSmallMatrixStuffing            300     0.0018     0.0018     0.0018     0.0005     0.0005            0.26x
+simple_LP_benchmarks.SimpleScalarParametrizedLPBenchmark  2,000,000     0.0653     0.0636     0.0635     0.1052     0.1046            1.60x
+svm_l1_regularization.SVMWithL1Regularization        501     0.0389     0.0387     0.0392     0.1537     0.1542            3.96x
+  geometric mean de_cached vs dpp [all           ] = 1.134x  (n=5)
+  geometric mean de_cached vs dpp [parametric    ] = 1.134x  (n=5)
+
+Errors:
+  recompile high_dim_convex_plasticity.ConvexPlasticity [dpp_coo]: ValueError: not DPP: dpp_coo needs the DPP path
+  recompile high_dim_convex_plasticity.ConvexPlasticity [dpp_scipy]: ValueError: not DPP: dpp_scipy needs the DPP path
+  recompile high_dim_convex_plasticity.ConvexPlasticity [de_cached]: ValueError: not DPP: de_cached needs the DPP path

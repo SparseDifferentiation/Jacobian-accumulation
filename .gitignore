@@ -1,6 +1,9 @@
 .venv/
 # isolated upstream-cvxpy env for the ignore_dpp backend sweep (see README)
 canonicalization/.venv-upstream/
+# isolated envs for the SparseDiffEngine #125 / cvxpy #3449 A/B (see README)
+canonicalization/.venv-de-base/
+canonicalization/.venv-de-pr125/
 __pycache__/
 *.pyc
 .DS_Store
@@ -22,3 +25,6 @@ canonicalization/.ref_cache/
 jacobian/ADOL-C/
 jacobian/*.o
 jacobian/sparse_jacobian
+
+# local third-party ADOL-C clone + build used by the jacobian/ minis
+adol-c/

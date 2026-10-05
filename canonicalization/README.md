@@ -142,6 +142,40 @@ whose absence makes even cold extraction quadratic on large PSD blocks
 the venv to PyPI 0.6.0: check the engine version after every sync and reinstall
 the local build if needed (see CLAUDE.md).
 
+### The #125 / #3449 A/B (2026-09-19, different machine — read before comparing)
+
+`results/results_backends_pr125_summary_20260919.md` re-measures the **warm**
+half of Table 2 on two newer branches: the DIFFENGINE canon backend of
+[cvxpy #3449](https://github.com/cvxpy/cvxpy/pull/3449)
+(`Transurgeon/cvxpy@pr-b-ignoredpp-default`), with the engine A/B'd across
+[SparseDiffEngine #125](https://github.com/SparseDifferentiation/SparseDiffEngine/pull/125)
+(parameter-free subtree pruning in the refresh walk). Two venvs,
+`.venv-de-base` and `.venv-de-pr125`, identical but for the sparsediffpy wheel.
+
+**Those numbers cannot be compared to the reference table below.** They were
+taken on an Apple M2 / macOS 26.5 / Python 3.13, not the 2018 Intel machine, and
+against a different cvxpy baseline — the pinned `pr-c-resolve-caching` branch has
+since been **deleted** from the fork, so `uv sync` no longer resolves and the pin
+needs a commit SHA. Both sides of every ratio in that file were re-measured
+in-run.
+
+Headline: #125 speeds up the engine's own share of a warm re-solve by up to
+**14.9×** (SVM) but the end-to-end geomean only moves 1.302× → 1.172×
+(engine/tensor), because after the PR the C engine is 3–20 % of a warm
+`get_problem_data` while 57–84 % is the scipy CSC rebuild of
+**Finding 1** in `diffengine_issue_draft_warm_extraction.md`, still unfixed.
+The write-up bounds what fixing that would buy.
+
+Two tools added with it, both reusable:
+
+- `verify_de_warm_equivalence.py` — the artefact gate the warm table needs:
+  DIFFENGINE vs the tensor path on `(P, c, A, b)` after a parameter update,
+  same `_sparse_close` MATCH discipline as `casadi_compare.py --verify`. It
+  reported ALL MATCH, max|diff| = 0 in both builds.
+- `probes/profile_warm_attribution.py` — splits one warm `get_problem_data`
+  into engine / scipy / glue, so a remaining loss can be attributed instead of
+  guessed at.
+
 ## Reference results
 
 Measured 2026-07-11/12 on a MacBook Pro (15-inch, 2018), 6-core Intel i7-8850H,

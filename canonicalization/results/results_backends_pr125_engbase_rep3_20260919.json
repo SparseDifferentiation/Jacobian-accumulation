@@ -1,0 +1,215 @@
+[
+ {
+  "module": "finance",
+  "class": "FactorCovarianceModel",
+  "cold": {
+   "DE_DPP": 0.17232287535443902
+  },
+  "n_vars": 25250,
+  "n_params": 2,
+  "sense": "Maximize",
+  "is_dpp": true,
+  "is_dpp_plain": true,
+  "comparison": {
+   "dpp": {
+    "mean_s": 0.02092065817366044,
+    "std_s": 0.0003777989114927178
+   },
+   "dpp_coo": {
+    "mean_s": 0.020676877908408643,
+    "std_s": 0.00021224063976373452
+   },
+   "dpp_scipy": {
+    "mean_s": 0.020763180622210105,
+    "std_s": 0.0001857772713883561
+   },
+   "diffengine": {
+    "mean_s": 0.09924546942735711,
+    "std_s": 0.0006261051196926996
+   },
+   "de_cached": {
+    "mean_s": 0.09902851109703383,
+    "std_s": 0.0005549293996321286
+   }
+  },
+  "done": true,
+  "status": "ok"
+ },
+ {
+  "module": "high_dim_convex_plasticity",
+  "class": "ConvexPlasticity",
+  "cold": {
+   "DE_DPP": 0.5060147079639137
+  },
+  "n_vars": 15000,
+  "n_params": 3,
+  "sense": "Minimize",
+  "is_dpp": false,
+  "is_dpp_plain": true,
+  "comparison": {
+   "dpp": {
+    "mean_s": 0.20461479720349113,
+    "std_s": 0.001986796963838004
+   },
+   "dpp_coo": {
+    "error": "ValueError: not DPP: dpp_coo needs the DPP path"
+   },
+   "dpp_scipy": {
+    "error": "ValueError: not DPP: dpp_scipy needs the DPP path"
+   },
+   "diffengine": {
+    "mean_s": 0.20472402228042483,
+    "std_s": 0.0015623841312936574
+   },
+   "de_cached": {
+    "error": "ValueError: not DPP: de_cached needs the DPP path"
+   }
+  },
+  "done": true,
+  "status": "ok"
+ },
+ {
+  "module": "matrix_stuffing",
+  "class": "ParamConeMatrixStuffing",
+  "cold": {
+   "DE_DPP": 0.03018454136326909
+  },
+  "n_vars": 200,
+  "n_params": 3,
+  "sense": "Minimize",
+  "is_dpp": true,
+  "is_dpp_plain": true,
+  "comparison": {
+   "dpp": {
+    "mean_s": 0.001043630453447501,
+    "std_s": 7.496280025057317e-05
+   },
+   "dpp_coo": {
+    "mean_s": 0.0009608725396295388,
+    "std_s": 1.8810195346342957e-05
+   },
+   "dpp_scipy": {
+    "mean_s": 0.0009699138191839059,
+    "std_s": 4.5742051151032815e-05
+   },
+   "diffengine": {
+    "mean_s": 0.0002942749919990698,
+    "std_s": 7.67383385387316e-06
+   },
+   "de_cached": {
+    "mean_s": 0.0002925249437491099,
+    "std_s": 5.648326862067867e-06
+   }
+  },
+  "done": true,
+  "status": "ok"
+ },
+ {
+  "module": "matrix_stuffing",
+  "class": "ParamSmallMatrixStuffing",
+  "cold": {
+   "DE_DPP": 0.04293854162096977
+  },
+  "n_vars": 300,
+  "n_params": 3,
+  "sense": "Minimize",
+  "is_dpp": true,
+  "is_dpp_plain": true,
+  "comparison": {
+   "dpp": {
+    "mean_s": 0.0018399861020346484,
+    "std_s": 2.1311943423820907e-05
+   },
+   "dpp_coo": {
+    "mean_s": 0.0018468612184127172,
+    "std_s": 2.769787505934843e-05
+   },
+   "dpp_scipy": {
+    "mean_s": 0.0018473611523707708,
+    "std_s": 3.412566142923601e-05
+   },
+   "diffengine": {
+    "mean_s": 0.00047615272924304006,
+    "std_s": 1.2986260674000723e-05
+   },
+   "de_cached": {
+    "mean_s": 0.00047587215279539424,
+    "std_s": 1.4482122162735995e-05
+   }
+  },
+  "done": true,
+  "status": "ok"
+ },
+ {
+  "module": "simple_LP_benchmarks",
+  "class": "SimpleScalarParametrizedLPBenchmark",
+  "cold": {
+   "DE_DPP": 0.22507183300331235
+  },
+  "n_vars": 2000000,
+  "n_params": 1,
+  "sense": "Minimize",
+  "is_dpp": true,
+  "is_dpp_plain": true,
+  "comparison": {
+   "dpp": {
+    "mean_s": 0.0641860555546979,
+    "std_s": 0.0006551958159873748
+   },
+   "dpp_coo": {
+    "mean_s": 0.06325516110906998,
+    "std_s": 0.0006109576310888323
+   },
+   "dpp_scipy": {
+    "mean_s": 0.0634578749537468,
+    "std_s": 0.0009741983887069664
+   },
+   "diffengine": {
+    "mean_s": 0.11537235012898843,
+    "std_s": 0.000981115081600565
+   },
+   "de_cached": {
+    "mean_s": 0.11548329178864757,
+    "std_s": 0.0007740393128417919
+   }
+  },
+  "done": true,
+  "status": "ok"
+ },
+ {
+  "module": "svm_l1_regularization",
+  "class": "SVMWithL1Regularization",
+  "cold": {
+   "DE_DPP": 0.37959379190579057
+  },
+  "n_vars": 501,
+  "n_params": 1,
+  "sense": "Minimize",
+  "is_dpp": true,
+  "is_dpp_plain": true,
+  "comparison": {
+   "dpp": {
+    "mean_s": 0.03886284443239371,
+    "std_s": 0.0002833893745505167
+   },
+   "dpp_coo": {
+    "mean_s": 0.038872852766265474,
+    "std_s": 0.00025101819626639565
+   },
+   "dpp_scipy": {
+    "mean_s": 0.03884426380197207,
+    "std_s": 0.0003351374093292697
+   },
+   "diffengine": {
+    "mean_s": 0.21822958899041017,
+    "std_s": 0.0028488279136954244
+   },
+   "de_cached": {
+    "mean_s": 0.2180079751648009,
+    "std_s": 0.0029313355657381865
+   }
+  },
+  "done": true,
+  "status": "ok"
+ }
+]
