@@ -17,6 +17,10 @@ Jacobian accumulation cost compared to knowing the derivative structure per atom
   `canonicalization/results/`. The `casadi_problems_ext_*.py` modules hand-mirror
   CVXPY's lowered forms **exactly** (row/column order); `casadi_compare.py --verify`
   must stay green (bit-identical matrices) after any change to them.
+  The thesis canonicalization benchmarks were split out into their own repo,
+  https://github.com/SparseDifferentiation/canonicalization-benchmarks (local clone
+  `~/Documents/diffengine-canonicalization-benchmarks`); new canonicalization work
+  goes there, and this `canonicalization/` copy is not kept in sync with it.
 - `jacobian/` — small per-tool sparse-Jacobian scripts on a shared tridiagonal system.
 - Additional canonicalization comparisons beyond CasADi/cvxcore, on 4 representative
   problems (`canonicalization/_lowered_data.py`): `julia_compare.py --tool sct` (the

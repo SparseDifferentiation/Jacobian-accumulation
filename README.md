@@ -24,7 +24,9 @@ structure a priori?
   bit-identical across systems before timing. Includes reference results and the
   mechanism probes (dense-block coloring blow-up, `casadi.hessian` star-coloring
   pathology). Backs chapter 4 of the associated thesis and
-  [cvxpy#3348](https://github.com/cvxpy/cvxpy/pull/3348).
+  [cvxpy#3348](https://github.com/cvxpy/cvxpy/pull/3348). The thesis benchmarks now
+  live in their own repo,
+  [SparseDifferentiation/canonicalization-benchmarks](https://github.com/SparseDifferentiation/canonicalization-benchmarks).
 - **[`jacobian/`](jacobian/)** — small self-contained sparse-Jacobian comparisons on a
   tridiagonal system: one script per tool (CasADi, JAX, ADOL-C, SparseDiffEngine, the
   Julia SCT+SMC+DI stack, AMPL/ASL), illustrating how each recovers — or never needs
